@@ -1,8 +1,8 @@
 const fetch = require('node-fetch');
 
-const KIMI_API_KEY = process.env.KIMI_API_KEY || 'sk-VZwqHiJdkuPNkkV5CxNCyc81ZYDNg3WLlRPexmpVZFGB6kXW';
-const KIMI_BASE_URL = process.env.KIMI_BASE_URL || 'https://api.moonshot.cn/v1';
-const KIMI_MODEL = process.env.KIMI_MODEL || 'moonshot-v1-32k';
+const KIMI_API_KEY = process.env.KIMI_API_KEY || 'sk-c7WDIB5Ryc59fJdmNN7kjcdiPljD0gzYvOlPRRLCwRkbp1mb';
+const KIMI_BASE_URL = process.env.KIMI_BASE_URL || 'https://api.moonshot.ai/v1';
+const KIMI_MODEL = process.env.KIMI_MODEL || 'kimi-k2.5';
 
 /**
  * Analyze a conversation with Kimi K2.5 AI

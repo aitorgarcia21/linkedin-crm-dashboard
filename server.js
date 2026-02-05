@@ -22,8 +22,8 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 const KIMI_API_KEY = process.env.KIMI_API_KEY;
-const KIMI_BASE_URL = process.env.KIMI_BASE_URL || 'https://api.moonshot.cn/v1';
-const KIMI_MODEL = process.env.KIMI_MODEL || 'moonshot-v1-32k';
+const KIMI_BASE_URL = process.env.KIMI_BASE_URL || 'https://api.moonshot.ai/v1';
+const KIMI_MODEL = process.env.KIMI_MODEL || 'kimi-k2.5';
 
 app.use(express.json());
 
@@ -44,8 +44,8 @@ app.get('/debug-env', (req, res) => {
     const mask = (v) => v ? v.slice(0, 6) + '...' + v.slice(-4) : 'NOT SET';
     res.json({
         KIMI_API_KEY: mask(process.env.KIMI_API_KEY),
-        KIMI_BASE_URL: process.env.KIMI_BASE_URL || 'NOT SET (default: https://api.moonshot.cn/v1)',
-        KIMI_MODEL: process.env.KIMI_MODEL || 'NOT SET (default: moonshot-v1-32k)',
+        KIMI_BASE_URL: process.env.KIMI_BASE_URL || 'NOT SET (default: https://api.moonshot.ai/v1)',
+        KIMI_MODEL: process.env.KIMI_MODEL || 'NOT SET (default: kimi-k2.5)',
         SUPABASE_URL: mask(process.env.SUPABASE_URL),
         SUPABASE_ANON_KEY: mask(process.env.SUPABASE_ANON_KEY),
         SUPABASE_KEY: mask(process.env.SUPABASE_KEY),
