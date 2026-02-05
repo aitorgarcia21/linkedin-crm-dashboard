@@ -187,7 +187,7 @@
         // Public Anon Key is safe for client-side
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlneXhjb2J1amFjYW1waXFuZHBmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk5NDYxMTUsImV4cCI6MjA4NTUyMjExNX0.8jgz6G0Irj6sRclcBKzYE5VzzXNrxzHgrAz45tHfHpc';
 
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         let activeConversationId = null;
 
@@ -215,7 +215,7 @@
 
         async function loadConversations() {
             // Fetch Conversations + Prospects + Last Message
-            const { data: conversations, error } = await supabase
+            const { data: conversations, error } = await supabaseClient
                 .from('conversations')
                 .select(`
                     id,
@@ -406,7 +406,7 @@
         loadConversations();
 
         // Realtime
-        supabase.channel('public:conversations')
+        supabaseClient.channel('public:conversations')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'conversations' }, loadConversations)
             .subscribe();
     </script>
