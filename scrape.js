@@ -8,7 +8,13 @@ const [user, pass] = AUTH.split(':');
 const AUTH_FR = `${user}-country-fr:${pass}`;
 const SBR_WS_ENDPOINT = `wss://${AUTH_FR}@brd.superproxy.io:9222`;
 
-// ... (existing code) ...
+const LINKEDIN_EMAIL = process.env.LINKEDIN_EMAIL || 'aitorgarcia2112@gmail.com';
+const LINKEDIN_PASSWORD = process.env.LINKEDIN_PASSWORD || '21AiPa01....';
+
+const SUPABASE_URL = process.env.SUPABASE_URL || 'https://igyxcobujacampiqndpf.supabase.co';
+const SUPABASE_KEY = process.env.SUPABASE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlneXhjb2J1amFjYW1waXFuZHBmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk5NDYxMTUsImV4cCI6MjA4NTUyMjExNX0.8jgz6G0Irj6sRclcBKzYE5VzzXNrxzHgrAz45tHfHpc';
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 async function scrapeLinkedIn() {
     console.log('🔌 Connecting to Bright Data Scraping Browser (FRANCE)...');
@@ -26,14 +32,6 @@ async function scrapeLinkedIn() {
         ignoreHTTPSErrors: true
     });
 
-    // ... (existing code for navigation) ...
-
-    // Use evaluate to set password values directly (simple assignment to bypass restriction)
-    await passwordInput.evaluate((el, password) => {
-        el.value = password;
-        // Only dispatch 'input' event, sometimes 'change' or too many events trigger security blocks
-        el.dispatchEvent(new Event('input', { bubbles: true }));
-    }, LINKEDIN_PASSWORD);
     const page = await context.newPage();
 
     try {
@@ -91,11 +89,11 @@ async function scrapeLinkedIn() {
 
         const passwordInput = await page.$('input[name="session_password"]') || await page.$('#password');
 
-        // Use evaluate to set password values directly (bypassing "Forbidden action: password typing" error)
+        // Use evaluate to set password values directly (simple assignment to bypass restriction)
         await passwordInput.evaluate((el, password) => {
             el.value = password;
+            // Only dispatch 'input' event, sometimes 'change' or too many events trigger security blocks
             el.dispatchEvent(new Event('input', { bubbles: true }));
-            el.dispatchEvent(new Event('change', { bubbles: true }));
         }, LINKEDIN_PASSWORD);
 
         await page.waitForTimeout(500);
