@@ -140,6 +140,7 @@
             justify-content: space-between;
             padding: 0 24px;
             background: #fff;
+            flex-shrink: 0;
         }
 
         .stats-row {
@@ -209,6 +210,7 @@
             padding: 16px;
             border-bottom: 1px solid #E5E7EB;
             background: #F9FAFB;
+            flex-shrink: 0;
         }
 
         .search-input {
@@ -357,6 +359,7 @@
             justify-content: space-between;
             padding: 0 24px;
             flex-shrink: 0;
+            min-height: 0;
         }
 
         .msg-header-left {
@@ -478,6 +481,7 @@
             padding: 16px 24px;
             border-top: 1px solid #E5E7EB;
             background: #fff;
+            flex-shrink: 0;
         }
 
         .msg-input-wrapper {
@@ -543,6 +547,154 @@
         @keyframes spin {
             to {
                 transform: rotate(360deg);
+            }
+        }
+
+        /* Qualification Panel */
+        .qualify-panel {
+            background: #fff;
+            border: 1px solid #E5E7EB;
+            border-radius: 12px;
+            margin: 0 24px 16px;
+            padding: 16px 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        }
+
+        .qualify-panel-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
+        .qualify-panel-header h3 {
+            font-size: 13px;
+            font-weight: 600;
+            color: #374151;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .qualify-close {
+            background: none;
+            border: none;
+            color: #9CA3AF;
+            cursor: pointer;
+            padding: 2px;
+            font-size: 18px;
+            line-height: 1;
+        }
+
+        .qualify-close:hover {
+            color: #374151;
+        }
+
+        .qualify-score {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .qualify-score.hot {
+            background: #FEE2E2;
+            color: #991B1B;
+        }
+
+        .qualify-score.warm {
+            background: #FEF3C7;
+            color: #92400E;
+        }
+
+        .qualify-score.cold {
+            background: #F3F4F6;
+            color: #6B7280;
+        }
+
+        .qualify-action {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            margin-left: 6px;
+        }
+
+        .qualify-action.relance { background: #DBEAFE; color: #1E40AF; }
+        .qualify-action.répondre { background: #D1FAE5; color: #065F46; }
+        .qualify-action.attendre { background: #FEF3C7; color: #92400E; }
+        .qualify-action.archiver { background: #F3F4F6; color: #6B7280; }
+
+        .qualify-reason {
+            font-size: 13px;
+            color: #4B5563;
+            line-height: 1.5;
+            margin-bottom: 12px;
+        }
+
+        .qualify-suggestion {
+            background: #F0F9FF;
+            border: 1px solid #BAE6FD;
+            border-radius: 8px;
+            padding: 10px 14px;
+            font-size: 13px;
+            color: #0C4A6E;
+            line-height: 1.5;
+        }
+
+        .qualify-suggestion-label {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #0369A1;
+            margin-bottom: 4px;
+        }
+
+        .qualify-use-btn {
+            margin-top: 8px;
+            background: #3B82F6;
+            color: #fff;
+            border: none;
+            padding: 6px 14px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+
+        .qualify-use-btn:hover {
+            background: #2563EB;
+        }
+
+        .qualify-loading {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #6B7280;
+            font-size: 13px;
+        }
+
+        .qualify-loading .spinner {
+            width: 18px;
+            height: 18px;
+            border-width: 2px;
+            margin: 0;
+        }
+
+        @media (max-width: 768px) {
+            .qualify-panel {
+                margin: 0 12px 12px;
+                padding: 12px 14px;
             }
         }
 
@@ -621,6 +773,7 @@
 
             .header {
                 padding: 0 16px 0 56px;
+                flex-shrink: 0;
             }
 
             .stats-row {
@@ -642,33 +795,39 @@
 
         /* ========== MOBILE (<768px) ========== */
         @media (max-width: 768px) {
+            /* Fixed viewport - NO body scroll */
             body {
+                height: 100vh;
+                height: 100dvh;
+                overflow: hidden;
                 flex-direction: column;
-                overflow: auto;
             }
 
+            /* Main fills viewport, flex column */
             .main {
                 flex: 1;
                 min-height: 0;
-                height: 100vh;
                 display: flex;
                 flex-direction: column;
             }
 
+            /* Header compact, never shrinks */
             .header {
                 height: auto;
-                min-height: 52px;
-                padding: 10px 12px 10px 52px;
+                min-height: 48px;
+                padding: 8px 12px 8px 52px;
+                flex-shrink: 0;
                 flex-wrap: wrap;
-                gap: 8px;
+                gap: 6px;
             }
 
             .stats-row {
-                gap: 16px;
+                gap: 14px;
             }
 
             .stat-block h4 {
                 font-size: 9px;
+                margin-bottom: 2px;
             }
 
             .stat-block p {
@@ -676,32 +835,60 @@
             }
 
             .status-badge {
-                font-size: 11px;
-                padding: 4px 10px;
+                font-size: 10px;
+                padding: 3px 8px;
             }
 
+            /* Content takes all remaining space */
             .content {
                 flex: 1;
+                min-height: 0;
                 flex-direction: column;
                 position: relative;
+                overflow: hidden;
             }
 
+            /* Conv list fills content */
             .conv-list {
                 width: 100%;
                 border-right: none;
                 flex: 1;
+                min-height: 0;
+                display: flex;
+                flex-direction: column;
             }
 
             .conv-list.hidden-mobile {
                 display: none;
             }
 
+            .search-box {
+                padding: 10px 12px;
+                flex-shrink: 0;
+            }
+
+            .conv-scroll {
+                flex: 1;
+                min-height: 0;
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            .conv-item {
+                padding: 12px;
+            }
+
+            /* Message view - absolute overlay on content */
             .msg-view {
                 display: none;
                 position: absolute;
-                inset: 0;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
                 z-index: 10;
                 background: #fff;
+                flex-direction: column;
             }
 
             .msg-view.active-mobile {
@@ -712,16 +899,18 @@
                 display: flex;
             }
 
+            /* Message header - compact, never shrinks */
             .msg-header {
                 height: auto;
-                min-height: 56px;
+                min-height: 48px;
                 padding: 8px 12px;
+                flex-shrink: 0;
                 flex-wrap: wrap;
-                gap: 8px;
+                gap: 6px;
             }
 
             .msg-header-left {
-                gap: 10px;
+                gap: 8px;
                 flex: 1;
                 min-width: 0;
             }
@@ -738,12 +927,18 @@
             }
 
             .btn {
-                padding: 6px 12px;
+                padding: 8px 14px;
                 font-size: 12px;
+                min-height: 36px;
             }
 
+            /* Message body - scrollable, takes remaining space */
             .msg-body {
+                flex: 1;
+                min-height: 0;
                 padding: 12px;
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
             }
 
             .msg-bubble {
@@ -752,41 +947,47 @@
                 font-size: 14px;
             }
 
+            /* Input area - never shrinks, stays at bottom */
             .msg-input-area {
                 padding: 10px 12px;
+                flex-shrink: 0;
             }
 
             .msg-textarea {
                 padding: 10px 44px 10px 12px;
-                font-size: 14px;
+                font-size: 16px; /* Prevents iOS zoom on focus */
             }
 
-            .search-box {
-                padding: 10px 12px;
-            }
-
-            .conv-item {
-                padding: 12px;
+            /* Qualify panel on mobile */
+            #qualifyContainer {
+                flex-shrink: 0;
+                max-height: 40vh;
+                overflow-y: auto;
             }
 
             .mobile-menu-btn {
-                top: 10px;
-                left: 10px;
+                top: 8px;
+                left: 8px;
             }
         }
 
         /* ========== SMALL MOBILE (<480px) ========== */
         @media (max-width: 480px) {
             .header {
-                padding: 8px 10px 8px 48px;
+                padding: 8px 8px 8px 48px;
+                min-height: 44px;
             }
 
             .stats-row {
-                gap: 12px;
+                gap: 10px;
             }
 
             .status-badge {
                 display: none;
+            }
+
+            .msg-header {
+                padding: 6px 10px;
             }
 
             .msg-actions {
@@ -794,14 +995,14 @@
                 justify-content: flex-end;
             }
 
-            .msg-header {
-                padding: 8px 10px;
-            }
-
             .avatar {
                 width: 34px;
                 height: 34px;
                 font-size: 14px;
+            }
+
+            .msg-body {
+                padding: 8px;
             }
         }
     </style>
@@ -974,6 +1175,9 @@
             }).join('');
         }
 
+        // Store current conversation data for AI calls
+        let currentConvData = null;
+
         async function select(id) {
             activeId = id;
             showMobileMessages();
@@ -986,6 +1190,8 @@
             const msgs = (data.messages || []).sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
             const name = data.prospects?.name || 'Inconnu';
             const url = data.prospects?.linkedin_url || '#';
+
+            currentConvData = { id, name, messages: msgs };
 
             document.getElementById('msgView').innerHTML = `
                 <div class="msg-header">
@@ -1001,10 +1207,11 @@
                         </div>
                     </div>
                     <div class="msg-actions">
-                        <button class="btn btn-outline">Qualifier</button>
-                        <button class="btn btn-primary">Archiver</button>
+                        <button class="btn btn-outline" onclick="qualifyLead()">Qualifier</button>
+                        <button class="btn btn-primary" onclick="archiveLead()">Archiver</button>
                     </div>
                 </div>
+                <div id="qualifyContainer"></div>
                 <div class="msg-body">${msgs.length ? msgs.map(m => `
                     <div class="msg-bubble ${m.sender === 'me' ? 'me' : 'them'}">
                         ${m.content}
@@ -1014,12 +1221,115 @@
                 <div class="msg-input-area">
                     <div class="msg-input-wrapper">
                         <textarea id="msgTextarea" name="msgTextarea" class="msg-textarea" rows="3" placeholder="Écrivez votre réponse..."></textarea>
-                        <button class="ai-btn" title="Générer avec IA">
+                        <button class="ai-btn" title="Qualifier avec IA" onclick="qualifyLead()">
                             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
                         </button>
                     </div>
                 </div>
             `;
+            load();
+        }
+
+        async function qualifyLead() {
+            if (!currentConvData || !currentConvData.messages.length) return;
+
+            const container = document.getElementById('qualifyContainer');
+            if (!container) return;
+
+            // Show loading
+            container.innerHTML = `
+                <div class="qualify-panel">
+                    <div class="qualify-loading">
+                        <div class="spinner"></div>
+                        Analyse IA en cours...
+                    </div>
+                </div>
+            `;
+
+            try {
+                const res = await fetch('/api/qualify', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        prospect_name: currentConvData.name,
+                        messages: currentConvData.messages
+                    })
+                });
+
+                const result = await res.json();
+
+                if (!result.success) {
+                    container.innerHTML = `
+                        <div class="qualify-panel">
+                            <div class="qualify-reason" style="color:#DC2626">Erreur : ${result.error}</div>
+                        </div>
+                    `;
+                    return;
+                }
+
+                const q = result.qualification;
+
+                // Update engagement_level in Supabase
+                await db.from('conversations').update({ engagement_level: q.score }).eq('id', currentConvData.id);
+
+                // Render qualification panel
+                const suggestionHtml = q.suggested_message ? `
+                    <div class="qualify-suggestion">
+                        <div class="qualify-suggestion-label">Message suggere</div>
+                        ${q.suggested_message}
+                        <br>
+                        <button class="qualify-use-btn" onclick="useSuggestion(this)">Utiliser ce message</button>
+                    </div>
+                ` : '';
+
+                container.innerHTML = `
+                    <div class="qualify-panel">
+                        <div class="qualify-panel-header">
+                            <h3>
+                                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                                Qualification Kimi AI
+                            </h3>
+                            <button class="qualify-close" onclick="this.closest('.qualify-panel').remove()">&times;</button>
+                        </div>
+                        <div>
+                            <span class="qualify-score ${q.score}">${q.score.toUpperCase()}</span>
+                            <span class="qualify-action ${q.action}">${q.action.toUpperCase()}</span>
+                        </div>
+                        <div class="qualify-reason">${q.reason}</div>
+                        ${suggestionHtml}
+                    </div>
+                `;
+
+                // Refresh list to show updated badge
+                load();
+
+            } catch (e) {
+                console.error('Qualify error:', e);
+                container.innerHTML = `
+                    <div class="qualify-panel">
+                        <div class="qualify-reason" style="color:#DC2626">Erreur de connexion au serveur</div>
+                    </div>
+                `;
+            }
+        }
+
+        function useSuggestion(btn) {
+            const suggestionEl = btn.closest('.qualify-suggestion');
+            // Get text content excluding the label and the button
+            const clone = suggestionEl.cloneNode(true);
+            clone.querySelector('.qualify-suggestion-label')?.remove();
+            clone.querySelector('.qualify-use-btn')?.remove();
+            const text = clone.textContent.trim();
+            const textarea = document.getElementById('msgTextarea');
+            if (textarea && text) {
+                textarea.value = text;
+                textarea.focus();
+            }
+        }
+
+        async function archiveLead() {
+            if (!activeId) return;
+            await db.from('conversations').update({ status: 'archived', engagement_level: 'cold' }).eq('id', activeId);
             load();
         }
 

@@ -1,10 +1,15 @@
 const express = require('express');
 const cron = require('node-cron');
 const path = require('path');
+require('dotenv').config();
 const { scrapeLinkedIn } = require('./scrape');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+const KIMI_API_KEY = process.env.KIMI_API_KEY;
+const KIMI_BASE_URL = process.env.KIMI_BASE_URL || 'https://api.moonshot.cn/v1';
+const KIMI_MODEL = process.env.KIMI_MODEL || 'moonshot-v1-32k';
 
 app.use(express.json());
 
@@ -14,6 +19,80 @@ app.use(express.static(path.join(__dirname)));
 // Health check - moved to /api/status so index.html is served at /
 app.get('/api/status', (req, res) => {
     res.json({ status: 'ok', service: 'LinkedIn Scraper', lastRun: global.lastRun || 'never' });
+});
+
+// Kimi AI - Qualify a lead from conversation messages
+app.post('/api/qualify', async (req, res) => {
+    const { prospect_name, messages } = req.body;
+
+    if (!KIMI_API_KEY) {
+        return res.status(500).json({ success: false, error: 'KIMI_API_KEY non configurée' });
+    }
+
+    if (!messages || !messages.length) {
+        return res.status(400).json({ success: false, error: 'Aucun message à analyser' });
+    }
+
+    const conversation = messages.map(m =>
+        `${m.sender === 'me' ? 'Moi' : prospect_name}: ${m.content}`
+    ).join('\n');
+
+    const systemPrompt = `Tu es un expert en sales B2B et prospection LinkedIn. Analyse cette conversation et fournis une qualification du lead.
+
+Réponds UNIQUEMENT avec un JSON valide (sans markdown, sans backticks) au format suivant :
+{
+  "score": "hot" | "warm" | "cold",
+  "action": "relance" | "répondre" | "attendre" | "archiver",
+  "reason": "explication courte (1-2 phrases)",
+  "suggested_message": "suggestion de prochain message à envoyer (ou null si archiver)"
+}
+
+Critères :
+- "hot" : le prospect montre un intérêt clair, pose des questions, veut avancer
+- "warm" : échange en cours, pas encore d'engagement fort
+- "cold" : pas de réponse, réponse négative, ou conversation morte depuis longtemps
+- "relance" : le prospect n'a pas répondu depuis un moment
+- "répondre" : le dernier message vient du prospect, il faut répondre
+- "attendre" : on vient d'envoyer un message, laisser du temps
+- "archiver" : conversation terminée ou prospect pas intéressé`;
+
+    try {
+        const response = await fetch(`${KIMI_BASE_URL}/chat/completions`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${KIMI_API_KEY}`
+            },
+            body: JSON.stringify({
+                model: KIMI_MODEL,
+                messages: [
+                    { role: 'system', content: systemPrompt },
+                    { role: 'user', content: `Conversation avec ${prospect_name} :\n\n${conversation}` }
+                ],
+                temperature: 0.3
+            })
+        });
+
+        if (!response.ok) {
+            const errText = await response.text();
+            console.error('Kimi API error:', response.status, errText);
+            return res.status(502).json({ success: false, error: `Kimi API error: ${response.status}` });
+        }
+
+        const data = await response.json();
+        const content = data.choices?.[0]?.message?.content;
+
+        if (!content) {
+            return res.status(502).json({ success: false, error: 'Réponse vide de Kimi' });
+        }
+
+        const qualification = JSON.parse(content);
+        res.json({ success: true, qualification });
+
+    } catch (error) {
+        console.error('Qualify error:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
 });
 
 // Manual trigger endpoint
