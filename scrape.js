@@ -17,8 +17,10 @@ async function scrapeLinkedIn() {
     console.log('🔌 Connecting to Bright Data Scraping Browser...');
 
     const browser = await chromium.connectOverCDP(SBR_WS_ENDPOINT);
-    const context = browser.contexts()[0];
-    const page = context.pages()[0];
+
+    // Create new context and page (Bright Data doesn't provide existing ones)
+    const context = await browser.newContext();
+    const page = await context.newPage();
 
     try {
         console.log('🔐 Logging into LinkedIn...');
