@@ -862,9 +862,16 @@ async function autoSync() {
         const parisTime = new Date().toLocaleString('fr-FR', { timeZone: 'Europe/Paris' });
         console.log(`\n🔄 === AUTO-SYNC STARTED === ${parisTime}`);
 
-        // Step 1: Scrape new LinkedIn messages (only new ones)
-        console.log('\n📬 Step 1: Scraping new LinkedIn messages...');
-        const scrapeResult = await scrapeLinkedIn();
+        // Step 1: Scrape LinkedIn messages (force full if no messages in DB)
+        const supabaseCheck = createClient(
+            process.env.SUPABASE_URL || 'https://igyxcobujacampiqndpf.supabase.co',
+            process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_KEY
+        );
+        const { count: msgCount } = await supabaseCheck.from('messages').select('id', { count: 'exact', head: true });
+        const forceFullScrape = (msgCount || 0) === 0;
+        if (forceFullScrape) console.log('⚠️ Messages table is empty — forcing FULL scrape!');
+        console.log(`\n📬 Step 1: Scraping LinkedIn messages${forceFullScrape ? ' (FORCE FULL)' : ''}...`);
+        const scrapeResult = await scrapeLinkedIn(forceFullScrape);
         global.lastRun = new Date().toISOString();
         console.log(`✅ Scrape done: ${scrapeResult.scraped} conversations, ${scrapeResult.saved} saved`);
 
