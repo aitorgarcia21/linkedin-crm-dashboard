@@ -2,7 +2,7 @@ const { chromium } = require('playwright-core');
 const { createClient } = require('@supabase/supabase-js');
 
 // Config
-const AUTH = process.env.BRIGHT_DATA_AUTH || '11360349-4ffd-4184-bf91-eec8386a00b9';
+const AUTH = process.env.BRIGHT_DATA_API_KEY || 'brd-customer-hl_dbce36ae-zone-scraping_browser1:de8e8wg0wkf3';
 const SBR_WS_ENDPOINT = `wss://${AUTH}@brd.superproxy.io:9222`;
 
 const LINKEDIN_EMAIL = process.env.LINKEDIN_EMAIL || 'aitorgarcia2112@gmail.com';
