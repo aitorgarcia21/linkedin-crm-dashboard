@@ -2,11 +2,8 @@ const { chromium } = require('playwright-core');
 const { createClient } = require('@supabase/supabase-js');
 
 // Config
-const AUTH = process.env.BRIGHT_DATA_AUTH || 'brd-customer-hl_dbce36ae-zone-scraping_browser1:de8e8wg0wkf3';
-// Add country targeting to username for stronger enforcement (FRANCE)
-const [user, pass] = AUTH.split(':');
-const AUTH_FR = `${user}-country-fr:${pass}`;
-const SBR_WS_ENDPOINT = `wss://${AUTH_FR}@brd.superproxy.io:9222`;
+const AUTH = process.env.BRIGHT_DATA_AUTH || '11360349-4ffd-4184-bf91-eec8386a00b9';
+const SBR_WS_ENDPOINT = `wss://${AUTH}@brd.superproxy.io:9222`;
 
 const LINKEDIN_EMAIL = process.env.LINKEDIN_EMAIL || 'aitorgarcia2112@gmail.com';
 const LINKEDIN_PASSWORD = process.env.LINKEDIN_PASSWORD || '21AiPa01....';
@@ -16,124 +13,137 @@ const SUPABASE_KEY = process.env.SUPABASE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6Ik
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
+async function connectWithRetry(maxRetries = 3) {
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+            console.log(`🔌 Connecting to Bright Data (attempt ${attempt}/${maxRetries})...`);
+            const browser = await chromium.connectOverCDP(SBR_WS_ENDPOINT);
+            return browser;
+        } catch (e) {
+            console.log(`⚠️ Connection attempt ${attempt} failed:`, e.message);
+            if (attempt === maxRetries) throw e;
+            await new Promise(r => setTimeout(r, 5000 * attempt));
+        }
+    }
+}
+
 async function scrapeLinkedIn() {
-    console.log('🔌 Connecting to Bright Data Scraping Browser (FRANCE)...');
-
-    // Target France (enforced via Auth string + query param)
-    const wsEndpoint = `${SBR_WS_ENDPOINT}?country=fr`;
-    const browser = await chromium.connectOverCDP(wsEndpoint);
-
-    // Create context with Desktop UA and Viewport (FR locale)
-    const context = await browser.newContext({
-        locale: 'fr-FR',
-        timezoneId: 'Europe/Paris',
-        userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
-        viewport: { width: 1920, height: 1080 },
-        ignoreHTTPSErrors: true
-    });
-
-    const page = await context.newPage();
+    console.log('🔌 Connecting to Bright Data Scraping Browser...');
+    
+    const browser = await connectWithRetry(3);
+    const context = browser.contexts()[0];
+    const page = context.pages()[0];
 
     try {
-        console.log('🔐 Logging into LinkedIn...');
-
-        // 1. Go to Homepage first (more robust than direct login URL)
-        console.log('🌍 Navigating to Homepage...');
-        await page.goto('https://www.linkedin.com', { waitUntil: 'domcontentloaded', timeout: 60000 });
-        await page.waitForTimeout(3000);
-
-        // 2. Click "Sign in" if on homepage
-        const signInBtn = await page.$('.nav__button-secondary, .sign-in-card__button, a[href*="login"]');
-        if (signInBtn) {
-            console.log('👉 Add clicking "Sign In" button...');
-            await signInBtn.click();
-            await page.waitForTimeout(3000);
-        }
-
-        // Handle Cookie Banner
-        try {
-            const cookieBtn = await page.$('button[action-type="ACCEPT"], button[data-control-name="ga-cookie.accept"], .artdeco-global-alert-action__button');
-            if (cookieBtn) {
-                console.log('🍪 Clicking cookie banner...');
-                await cookieBtn.click();
-                await page.waitForTimeout(1000);
-            }
-        } catch (e) { console.log('🍪 No cookie banner found'); }
-
-        // Wait for ANY login selector to appear
-        try {
-            await Promise.any([
-                page.waitForSelector('input[name="session_key"]', { timeout: 60000 }),
-                page.waitForSelector('#username', { timeout: 60000 })
-            ]);
-        } catch (e) {
-            console.log('⏳ Timeout waiting for login form');
-        }
-
-        // Check for login form with multiple selectors
-        const sessionKey = await page.$('input[name="session_key"]') || await page.$('#username');
-
-
-
-        if (!sessionKey) {
-            const pageUrl = page.url();
-            const pageTitle = await page.title();
-            const pageContent = await page.evaluate(() => document.body.innerText.substring(0, 500));
-            console.log('⚠️ Login form not found!');
-            throw new Error(`Login form not found - Page: ${pageTitle} at ${pageUrl} - Content: ${pageContent}`);
-        }
-
-        console.log('📝 Filling credentials...');
-        await sessionKey.fill(LINKEDIN_EMAIL);
-        await page.waitForTimeout(500);
-
-        // Trick: Remove the restricted password field and inject a hidden one with the value
-        // This avoids "interacting" with the monitored element entirely
-        await page.evaluate((password) => {
-            const originalInput = document.querySelector('input[name="session_password"]') || document.querySelector('#password');
-            if (originalInput) {
-                const parent = originalInput.parentElement;
-                const hiddenInput = document.createElement('input');
-                hiddenInput.type = 'hidden';
-                hiddenInput.name = 'session_password';
-                hiddenInput.value = password;
-
-                // Remove the sensitive element that triggers the block
-                originalInput.remove();
-
-                // Append the safe hidden element
-                parent.appendChild(hiddenInput);
-            }
-        }, LINKEDIN_PASSWORD);
-
-        await page.waitForTimeout(500);
-
-        const submitBtn = await page.$('button[type="submit"]') || await page.$('.login__form_action_container button');
-        await submitBtn.click();
-
-        // Wait for login with longer timeout and debug info
-        try {
-            await page.waitForURL('**/feed/**', { timeout: 120000 });
-            console.log('✅ Logged in!');
-        } catch (e) {
-            console.log('❌ Login timeout! Capturing state...');
-            const finalUrl = page.url();
-            const finalTitle = await page.title();
-            const finalContent = await page.evaluate(() => document.body.innerText.substring(0, 500));
+        console.log('🔐 Checking LinkedIn session...');
+        await page.goto('https://www.linkedin.com/login', { waitUntil: 'networkidle' });
+        
+        // Check if already logged in (redirected to feed)
+        const url = page.url();
+        if (url.includes('/feed') || !url.includes('/login')) {
+            console.log('✅ Already logged in!');
+        } else {
+            // Perform login
+            await page.fill('input[name="session_key"]', LINKEDIN_EMAIL);
+            await page.fill('input[name="session_password"]', LINKEDIN_PASSWORD);
+            await page.click('button[type="submit"]');
             
-            // Take screenshot for debugging (if supported)
+            // Wait for login with multiple fallback strategies
+            console.log('⏳ Waiting for login to complete...');
+            
+            // Strategy 1: Wait for feed URL
             try {
-                await page.screenshot({ path: 'login_failure.png', fullPage: true });
-                console.log('📸 Screenshot saved to login_failure.png');
-            } catch (err) { console.log('📸 Screenshot failed:', err.message); }
-
-            throw new Error(`Login Timeout - Stucked at: ${finalTitle} (${finalUrl}) \nContent Preview: ${finalContent}`);
+                await page.waitForURL('**/feed/**', { timeout: 30000 });
+                console.log('✅ Logged in (feed detected)!');
+            } catch (e) {
+                console.log('⚠️ Feed navigation timeout, checking for alternatives...');
+                
+                // Strategy 2: Check if we're on a security/challenge page
+                const currentUrl = page.url();
+                console.log('🔍 Current URL:', currentUrl);
+                
+                if (currentUrl.includes('checkpoint') || currentUrl.includes('challenge')) {
+                    console.log('🔒 Security checkpoint detected - manual intervention may be needed');
+                    await page.waitForTimeout(60000);
+                }
+                
+                // Strategy 3: Check if we're already on a logged-in page
+                const isLoggedIn = await page.evaluate(() => {
+                    return !!document.querySelector('.global-nav__me') || 
+                           !!document.querySelector('.feed-identity-module') ||
+                           !!document.querySelector('a[href="/messaging/"]');
+                });
+                
+                if (isLoggedIn) {
+                    console.log('✅ Logged in (detected via page elements)!');
+                } else {
+                    throw new Error('Login failed - unable to detect logged-in state. URL: ' + currentUrl);
+                }
+            }
         }
 
-        // Go to messages
+        // Go to messages with retry
         console.log('📬 Navigating to messages...');
         await page.goto('https://www.linkedin.com/messaging/', { waitUntil: 'networkidle' });
         await page.waitForTimeout(3000);
+
+        // Handle Cookie Banner - LinkedIn's new consent screen
+        try {
+            console.log('🍪 Checking for cookie/consent banner...');
+            await page.waitForTimeout(2000);
+            
+            // Multiple strategies for cookie acceptance
+            const cookieSelectors = [
+                'button[action-type="ACCEPT"]',
+                'button[data-control-name="ga-cookie.accept"]', 
+                '.artdeco-global-alert-action__button',
+                'button:has-text("Accept")',
+                'button:has-text("Accepter")',
+                '[data-testid="accept-cookie-banner-button"]',
+                '.truste-button',
+                'button[id*="accept"]',
+                'button[class*="accept"]',
+                'button:has-text("Agree")',
+                'button:has-text("Continue")'
+            ];
+            
+            for (const selector of cookieSelectors) {
+                const btn = await page.$(selector);
+                if (btn) {
+                    console.log(`🍪 Clicking cookie button: ${selector}`);
+                    await btn.click();
+                    await page.waitForTimeout(1500);
+                    break;
+                }
+            }
+            
+            // Alternative: Click by text content evaluation
+            const clicked = await page.evaluate(() => {
+                const buttons = Array.from(document.querySelectorAll('button'));
+                const acceptBtn = buttons.find(b => 
+                    b.textContent?.toLowerCase().includes('accept') ||
+                    b.textContent?.toLowerCase().includes('accepter') ||
+                    b.textContent?.toLowerCase().includes('agree') ||
+                    b.textContent?.toLowerCase().includes('continue') ||
+                    b.textContent?.toLowerCase().includes('consent')
+                );
+                if (acceptBtn) {
+                    acceptBtn.click();
+                    return true;
+                }
+                return false;
+            });
+            
+            if (clicked) {
+                console.log('🍪 Cookie banner handled via text matching');
+                await page.waitForTimeout(1500);
+            } else {
+                console.log('🍪 No cookie banner found or already accepted');
+            }
+            
+        } catch (e) { 
+            console.log('🍪 Cookie handling error:', e.message); 
+        }
 
         // Get conversation list
         const conversationElements = await page.$$('.msg-conversation-listitem');
