@@ -7,408 +7,774 @@
     <title>LINKIFG - Intelligence Sales</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: { sans: ['Inter', 'sans-serif'] },
-                    colors: {
-                        background: '#F9FAFB',
-                        surface: '#FFFFFF',
-                        primary: '#111827',
-                        secondary: '#6B7280',
-                        accent: '#3B82F6',
-                        success: '#10B981',
-                        warning: '#F59E0B',
-                        danger: '#EF4444',
-                    }
-                }
-            }
-        }
-    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
-            background-color: #F3F4F6;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #F3F4F6;
             height: 100vh;
+            overflow: hidden;
+            display: flex;
+            color: #1F2937;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 260px;
+            background: #fff;
+            border-right: 1px solid #E5E7EB;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .sidebar-header {
+            padding: 24px;
+        }
+
+        .logo {
+            font-size: 20px;
+            font-weight: 700;
+            color: #111827;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .logo-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #3B82F6;
+        }
+
+        .nav {
+            padding: 0 12px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            color: #6B7280;
+            text-decoration: none;
+            margin-bottom: 4px;
+            transition: all 0.15s;
+        }
+
+        .nav-item:hover {
+            background: #F9FAFB;
+        }
+
+        .nav-item.active {
+            background: #EFF6FF;
+            color: #3B82F6;
+        }
+
+        .nav-item svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        .sidebar-footer {
+            padding: 16px;
+            border-top: 1px solid #E5E7EB;
+        }
+
+        .sync-btn {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            background: #111827;
+            color: #fff;
+            border: none;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+
+        .sync-btn:hover {
+            background: #1F2937;
+        }
+
+        .sync-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .sync-btn svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        /* Main */
+        .main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            background: #fff;
+        }
+
+        /* Header */
+        .header {
+            height: 64px;
+            border-bottom: 1px solid #E5E7EB;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+            background: #fff;
+        }
+
+        .stats-row {
+            display: flex;
+            gap: 40px;
+        }
+
+        .stat-block h4 {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #9CA3AF;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .stat-block p {
+            font-size: 20px;
+            font-weight: 700;
+            color: #111827;
+        }
+
+        .stat-block p.urgent {
+            color: #DC2626;
+        }
+
+        .stat-block p.success {
+            color: #059669;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+            background: #D1FAE5;
+            color: #065F46;
+        }
+
+        .status-badge .dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #10B981;
+        }
+
+        /* Content Area */
+        .content {
+            flex: 1;
+            display: flex;
             overflow: hidden;
         }
 
-        .scrollbar-hide::-webkit-scrollbar {
-            display: none;
+        /* Conversation List */
+        .conv-list {
+            width: 380px;
+            border-right: 1px solid #E5E7EB;
+            display: flex;
+            flex-direction: column;
+            background: #F9FAFB;
         }
 
-        .glass-panel {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+        .search-box {
+            padding: 16px;
+            border-bottom: 1px solid #E5E7EB;
+            background: #F9FAFB;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 10px 12px 10px 36px;
+            border: 1px solid #D1D5DB;
+            border-radius: 8px;
+            font-size: 14px;
+            background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%239CA3AF'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z'/%3E%3C/svg%3E") 10px center no-repeat;
+            background-size: 16px;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #3B82F6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .conv-scroll {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .conv-item {
+            padding: 16px;
+            border-bottom: 1px solid #E5E7EB;
+            border-left: 4px solid transparent;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+
+        .conv-item:hover {
+            background: #F3F4F6;
+        }
+
+        .conv-item.active {
+            background: #EFF6FF;
+            border-left-color: #3B82F6;
+        }
+
+        .conv-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 4px;
+        }
+
+        .conv-name {
+            font-weight: 600;
+            font-size: 15px;
+            color: #111827;
+        }
+
+        .conv-time {
+            font-size: 12px;
+            color: #9CA3AF;
+            white-space: nowrap;
+        }
+
+        .conv-title {
+            font-size: 12px;
+            color: #6B7280;
+            margin-bottom: 8px;
+        }
+
+        .conv-preview {
+            font-size: 13px;
+            color: #4B5563;
+            line-height: 1.4;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            margin-bottom: 8px;
+        }
+
+        .conv-badges {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .badge-urgent {
+            background: #FEE2E2;
+            color: #991B1B;
+        }
+
+        .badge-followup {
+            background: #FEF3C7;
+            color: #92400E;
+        }
+
+        .badge-cold {
+            background: #F3F4F6;
+            color: #6B7280;
+            border: 1px solid #E5E7EB;
+        }
+
+        .badge-warm {
+            background: #FEF3C7;
+            color: #92400E;
+        }
+
+        .badge-hot {
+            background: #FEE2E2;
+            color: #991B1B;
+        }
+
+        /* Message View */
+        .msg-view {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #fff;
+        }
+
+        .msg-empty {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #9CA3AF;
+            text-align: center;
+        }
+
+        .msg-empty svg {
+            width: 64px;
+            height: 64px;
+            margin-bottom: 16px;
+            opacity: 0.3;
+        }
+
+        .msg-header {
+            height: 64px;
+            border-bottom: 1px solid #E5E7EB;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+            flex-shrink: 0;
+        }
+
+        .msg-header-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #DBEAFE;
+            color: #3B82F6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 16px;
+        }
+
+        .msg-header-info h2 {
+            font-size: 16px;
+            font-weight: 600;
+            color: #111827;
+        }
+
+        .msg-header-info a {
+            font-size: 12px;
+            color: #3B82F6;
+            text-decoration: none;
+        }
+
+        .msg-header-info a:hover {
+            text-decoration: underline;
+        }
+
+        .msg-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.15s;
+            border: none;
+        }
+
+        .btn-outline {
+            background: #fff;
+            border: 1px solid #D1D5DB;
+            color: #374151;
+        }
+
+        .btn-outline:hover {
+            background: #F9FAFB;
+        }
+
+        .btn-primary {
+            background: #3B82F6;
+            color: #fff;
+        }
+
+        .btn-primary:hover {
+            background: #2563EB;
+        }
+
+        .msg-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+            background: #F9FAFB;
+        }
+
+        .msg-bubble {
+            max-width: 70%;
+            padding: 14px 18px;
+            border-radius: 16px;
+            margin-bottom: 16px;
+            font-size: 14px;
+            line-height: 1.5;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        }
+
+        .msg-bubble.me {
+            background: #3B82F6;
+            color: #fff;
+            margin-left: auto;
+            border-bottom-right-radius: 4px;
+        }
+
+        .msg-bubble.them {
+            background: #fff;
+            color: #1F2937;
+            border: 1px solid #E5E7EB;
+            border-bottom-left-radius: 4px;
+        }
+
+        .msg-time {
+            font-size: 10px;
+            margin-top: 6px;
+            opacity: 0.7;
+        }
+
+        .msg-bubble.me .msg-time {
+            text-align: right;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .msg-bubble.them .msg-time {
+            color: #9CA3AF;
+        }
+
+        .msg-input-area {
+            padding: 16px 24px;
+            border-top: 1px solid #E5E7EB;
+            background: #fff;
+        }
+
+        .msg-input-wrapper {
+            position: relative;
+        }
+
+        .msg-textarea {
+            width: 100%;
+            padding: 14px 50px 14px 16px;
+            border: 1px solid #D1D5DB;
+            border-radius: 12px;
+            font-size: 14px;
+            font-family: inherit;
+            resize: none;
+            line-height: 1.5;
+        }
+
+        .msg-textarea:focus {
+            outline: none;
+            border-color: #3B82F6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .ai-btn {
+            position: absolute;
+            right: 12px;
+            bottom: 12px;
+            background: none;
+            border: none;
+            color: #3B82F6;
+            cursor: pointer;
+            padding: 6px;
+            border-radius: 6px;
+            transition: background 0.15s;
+        }
+
+        .ai-btn:hover {
+            background: #EFF6FF;
+        }
+
+        .ai-btn svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        /* Loading */
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #9CA3AF;
+        }
+
+        .spinner {
+            width: 32px;
+            height: 32px;
+            border: 3px solid #E5E7EB;
+            border-top-color: #3B82F6;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 12px;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
         }
     </style>
 </head>
 
-<body class="flex h-screen text-slate-800">
+<body>
 
     <!-- Sidebar -->
-    <aside class="w-64 bg-white border-r border-slate-200 flex flex-col justify-between">
-        <div class="p-6">
-            <h1 class="text-xl font-bold tracking-tight text-slate-900 mb-8 flex items-center gap-2">
-                <span class="w-3 h-3 rounded-full bg-blue-600"></span> LINKIFG
-            </h1>
-
-            <nav class="space-y-1">
-                <a href="#"
-                    class="flex items-center gap-3 px-3 py-2 text-sm font-medium text-blue-600 bg-blue-50 rounded-lg">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <aside class="sidebar">
+        <div>
+            <div class="sidebar-header">
+                <div class="logo"><span class="logo-dot"></span> LINKIFG</div>
+            </div>
+            <nav class="nav">
+                <a href="#" class="nav-item active">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z">
-                        </path>
+                            d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                     </svg>
                     Inbox
-                    <span id="unread-count"
-                        class="ml-auto bg-blue-600 text-white text-xs font-bold px-2 py-0.5 rounded-full hidden">0</span>
                 </a>
-                <a href="#"
-                    class="flex items-center gap-3 px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 rounded-lg">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <a href="#" class="nav-item">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z">
-                        </path>
+                            d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
                     </svg>
                     Leads
                 </a>
-                <a href="#"
-                    class="flex items-center gap-3 px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 rounded-lg">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <a href="#" class="nav-item">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z">
-                        </path>
+                            d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                     </svg>
                     Performance
                 </a>
             </nav>
         </div>
-
-        <div class="p-4 border-t border-slate-200">
-            <button onclick="triggerScrape()"
-                class="w-full flex items-center justify-center gap-2 bg-slate-900 hover:bg-slate-800 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition-colors">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div class="sidebar-footer">
+            <button class="sync-btn" id="syncBtn">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15">
-                    </path>
+                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                 </svg>
                 Sync LinkedIn
             </button>
         </div>
     </aside>
 
-    <!-- Main Content -->
-    <main class="flex-1 flex flex-col min-w-0 bg-white">
-        <!-- Top Stats Bar -->
-        <header class="h-16 border-b border-slate-200 flex items-center justify-between px-6 bg-white">
-            <div class="flex items-center gap-8">
-                <div>
-                    <span class="text-xs text-slate-500 uppercase font-semibold tracking-wider">Prospects</span>
-                    <p class="text-lg font-bold text-slate-900" id="stat-prospects">--</p>
+    <!-- Main -->
+    <main class="main">
+        <header class="header">
+            <div class="stats-row">
+                <div class="stat-block">
+                    <h4>Prospects</h4>
+                    <p id="statProspects">--</p>
                 </div>
-                <div>
-                    <span class="text-xs text-slate-500 uppercase font-semibold tracking-wider">À Répondre (<
-                            24h)</span>
-                            <p class="text-lg font-bold text-red-600" id="stat-urgent">--</p>
+                <div class="stat-block">
+                    <h4>À Répondre</h4>
+                    <p class="urgent" id="statUrgent">--</p>
                 </div>
-                <div>
-                    <span class="text-xs text-slate-500 uppercase font-semibold tracking-wider">Opportunités</span>
-                    <p class="text-lg font-bold text-emerald-600" id="stat-opportunities">--</p>
+                <div class="stat-block">
+                    <h4>Opportunités</h4>
+                    <p class="success" id="statOpportunities">--</p>
                 </div>
             </div>
-            <div class="flex items-center gap-4">
-                <span
-                    class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                    <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>
-                    System Operational
-                </span>
-            </div>
+            <div class="status-badge"><span class="dot"></span> Système Opérationnel</div>
         </header>
 
-        <!-- Two Column View -->
-        <div class="flex-1 flex overflow-hidden">
-
-            <!-- Conversation List (Left) -->
-            <div class="w-96 border-r border-slate-200 flex flex-col bg-slate-50">
-                <div class="p-4 border-b border-slate-200 sticky top-0 bg-slate-50 z-10">
-                    <div class="relative">
-                        <input type="text" placeholder="Rechercher un prospect..."
-                            class="w-full pl-9 pr-4 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                        <svg class="w-4 h-4 text-slate-400 absolute left-3 top-2.5" fill="none" stroke="currentColor"
-                            viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                        </svg>
-                    </div>
+        <div class="content">
+            <div class="conv-list">
+                <div class="search-box">
+                    <input type="text" id="searchInput" name="searchInput" class="search-input"
+                        placeholder="Rechercher un prospect...">
                 </div>
-
-                <div id="conversation-list" class="flex-1 overflow-y-auto">
-                    <!-- Loading State -->
-                    <div class="p-8 text-center text-slate-500">
-                        <svg class="animate-spin h-8 w-8 mx-auto mb-2 text-blue-500" xmlns="http://www.w3.org/2000/svg"
-                            fill="none" viewBox="0 0 24 24">
-                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4">
-                            </circle>
-                            <path class="opacity-75" fill="currentColor"
-                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
-                            </path>
-                        </svg>
-                        Chargement des conversations...
+                <div class="conv-scroll" id="convList">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        Chargement...
                     </div>
                 </div>
             </div>
-
-            <!-- Message Detail (Right) -->
-            <div id="message-view" class="flex-1 flex flex-col bg-white">
-                <div class="h-full flex items-center justify-center text-slate-400">
-                    <div class="text-center">
-                        <svg class="w-16 h-16 mx-auto mb-4 text-slate-200" fill="none" stroke="currentColor"
-                            viewBox="0 0 24 24">
+            <div class="msg-view" id="msgView">
+                <div class="msg-empty">
+                    <div>
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z">
-                            </path>
+                                d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                         </svg>
-                        <p>Sélectionnez une conversation pour voir les détails</p>
+                        <p>Sélectionnez une conversation</p>
                     </div>
                 </div>
             </div>
-
         </div>
     </main>
 
     <script>
         const SUPABASE_URL = 'https://igyxcobujacampiqndpf.supabase.co';
-        // Public Anon Key is safe for client-side
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlneXhjb2J1amFjYW1waXFuZHBmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk5NDYxMTUsImV4cCI6MjA4NTUyMjExNX0.8jgz6G0Irj6sRclcBKzYE5VzzXNrxzHgrAz45tHfHpc';
 
-        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        let activeId = null;
 
-        let activeConversationId = null;
-
-        // --- Logic: Sorting Essentials ---
-        // 1. Unanswered by me (Needs Reply) -> Top Priority
-        // 2. Unanswered by them for > 3 days (Needs Followup) -> Medium Priority
-        // 3. Newest otherwise
-        function getPriorityScore(conv, lastMsg) {
-            const now = new Date();
-            const msgDate = new Date(lastMsg ? lastMsg.timestamp : conv.created_at);
-            const daysDiff = (now - msgDate) / (1000 * 60 * 60 * 24);
-
-            if (lastMsg && lastMsg.sender !== 'me') {
-                // They wrote last. High priority. 
-                // Older it is, HIGHER the priority (don't leave them hanging)
-                return 1000 + daysDiff;
-            }
-            if (lastMsg && lastMsg.sender === 'me' && daysDiff > 3) {
-                // I wrote last, > 3 days ago. Ghosted? Need followup.
-                return 500 + daysDiff;
-            }
-            // Normal chronology
-            return msgDate.getTime() / 10000000000;
+        function getPriority(conv, lastMsg) {
+            const now = Date.now();
+            const msgTime = lastMsg ? new Date(lastMsg.timestamp).getTime() : new Date(conv.created_at).getTime();
+            const days = (now - msgTime) / 86400000;
+            if (lastMsg && lastMsg.sender !== 'me') return 1000 + days;
+            if (lastMsg && lastMsg.sender === 'me' && days > 3) return 500 + days;
+            return msgTime / 1e10;
         }
 
-        async function loadConversations() {
-            // Fetch Conversations + Prospects + Last Message
-            const { data: conversations, error } = await supabaseClient
-                .from('conversations')
-                .select(`
-                    id,
-                    last_message_at,
-                    last_message_by,
-                    unread_count,
-                    status,
-                    engagement_level,
-                    prospects (name, company, job_title, linkedin_url),
-                    messages (content, sender, timestamp)
-                `)
-                .order('last_message_at', { ascending: false });
+        function timeAgo(date) {
+            const s = Math.floor((Date.now() - new Date(date)) / 1000);
+            if (s < 60) return "à l'instant";
+            if (s < 3600) return Math.floor(s / 60) + " min";
+            if (s < 86400) return Math.floor(s / 3600) + " h";
+            if (s < 2592000) return Math.floor(s / 86400) + " j";
+            return Math.floor(s / 2592000) + " mois";
+        }
 
-            if (error) {
-                console.error("Error fetching data:", error);
+        async function load() {
+            const { data, error } = await db.from('conversations').select(`
+                id, last_message_at, last_message_by, status, engagement_level,
+                prospects (name, company, job_title, linkedin_url),
+                messages (content, sender, timestamp)
+            `).order('last_message_at', { ascending: false });
+
+            if (error) { console.error(error); return; }
+
+            const sorted = data.map(c => {
+                const msgs = c.messages || [];
+                const last = msgs.length ? msgs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))[0] : null;
+                return { ...c, lastMsg: last, score: getPriority(c, last) };
+            }).sort((a, b) => b.score - a.score);
+
+            renderList(sorted);
+            updateStats(sorted);
+        }
+
+        function renderList(convs) {
+            const el = document.getElementById('convList');
+            if (!convs.length) {
+                el.innerHTML = '<div class="loading">Aucune conversation</div>';
                 return;
             }
+            el.innerHTML = convs.map(c => {
+                const name = c.prospects?.name || 'Inconnu';
+                const title = c.prospects?.job_title ? `${c.prospects.job_title} @ ${c.prospects.company || ''}` : '';
+                const preview = c.lastMsg?.content || 'Nouvelle connexion';
+                const time = c.lastMsg ? timeAgo(c.lastMsg.timestamp) : '';
 
-            // Process & Sort
-            const sortedConvs = conversations.map(c => {
-                // Get absolute last message
-                const lastMsg = c.messages && c.messages.length > 0
-                    ? c.messages.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))[0]
-                    : null;
+                let badges = '';
+                if (c.lastMsg?.sender !== 'me') badges += '<span class="badge badge-urgent">À répondre</span>';
+                else if (c.lastMsg && (Date.now() - new Date(c.lastMsg.timestamp)) > 259200000) badges += '<span class="badge badge-followup">Relance</span>';
+                badges += `<span class="badge badge-${c.engagement_level || 'cold'}">${c.engagement_level || 'cold'}</span>`;
 
-                return {
-                    ...c,
-                    lastMsg,
-                    score: getPriorityScore(c, lastMsg)
-                };
-            }).sort((a, b) => b.score - a.score); // Descending score
-
-            renderList(sortedConvs);
-            updateStats(sortedConvs);
+                return `<div class="conv-item${c.id === activeId ? ' active' : ''}" onclick="select('${c.id}')">
+                    <div class="conv-header"><span class="conv-name">${name}</span><span class="conv-time">${time}</span></div>
+                    <div class="conv-title">${title}</div>
+                    <div class="conv-preview">${preview}</div>
+                    <div class="conv-badges">${badges}</div>
+                </div>`;
+            }).join('');
         }
 
-        function renderList(conversations) {
-            const container = document.getElementById('conversation-list');
-            container.innerHTML = '';
+        async function select(id) {
+            activeId = id;
+            const { data } = await db.from('conversations').select(`
+                id, prospects (name, linkedin_url), messages (content, sender, timestamp)
+            `).eq('id', id).single();
 
-            conversations.forEach(conv => {
-                const isSelected = conv.id === activeConversationId;
-                const lastMsgContent = conv.lastMsg ? conv.lastMsg.content : 'Nouvelle connexion';
-                const timeAgo = conv.lastMsg ? timeSince(new Date(conv.lastMsg.timestamp)) : '';
+            if (!data) return;
 
-                // Badge Logic
-                let badge = '';
-                if (conv.lastMsg?.sender !== 'me') {
-                    badge = `<span class="bg-red-100 text-red-700 text-xs px-2 py-0.5 rounded-full font-bold">À répondre</span>`;
-                } else if (new Date() - new Date(conv.last_message_at) > 3 * 24 * 60 * 60 * 1000) {
-                    badge = `<span class="bg-amber-100 text-amber-700 text-xs px-2 py-0.5 rounded-full font-bold">Relance requise</span>`;
-                }
+            const msgs = (data.messages || []).sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+            const name = data.prospects?.name || 'Inconnu';
+            const url = data.prospects?.linkedin_url || '#';
 
-                const div = document.createElement('div');
-                div.className = `p-4 border-b border-slate-100 cursor-pointer transition hover:bg-slate-50 ${isSelected ? 'bg-blue-50 border-l-4 border-l-blue-600' : 'border-l-4 border-l-transparent'}`;
-                div.innerHTML = `
-                    <div class="flex justify-between items-start mb-1">
-                        <h3 class="font-semibold text-slate-900 truncate pr-2">${conv.prospects?.name || 'Inconnu'}</h3>
-                        <span class="text-xs text-slate-400 whitespace-nowrap">${timeAgo}</span>
-                    </div>
-                    <div class="text-xs text-slate-500 mb-2 truncate">${conv.prospects?.job_title || ''} @ ${conv.prospects?.company || ''}</div>
-                    <p class="text-sm text-slate-600 line-clamp-2 mb-2">${lastMsgContent}</p>
-                    <div class="flex items-center gap-2">
-                        ${badge}
-                        <span class="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200 capitalize">${conv.engagement_level || 'cold'}</span>
-                    </div>
-                `;
-                div.onclick = () => selectConversation(conv);
-                container.appendChild(div);
-            });
-        }
-
-        async function selectConversation(conv) {
-            activeConversationId = conv.id;
-            loadConversations(); // Re-render list to show active state
-
-            const view = document.getElementById('message-view');
-
-            // Generate Chat View
-            view.innerHTML = `
-                <!-- Chat Header -->
-                <div class="h-16 border-b border-slate-200 flex items-center justify-between px-6 bg-white shrink-0">
-                    <div class="flex items-center gap-4">
-                        <div class="h-10 w-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-lg">
-                            ${conv.prospects?.name?.charAt(0) || '?'}
-                        </div>
-                        <div>
-                            <h2 class="font-bold text-slate-900">${conv.prospects?.name}</h2>
-                            <a href="${conv.prospects?.linkedin_url}" target="_blank" class="text-xs text-blue-600 hover:underline flex items-center gap-1">
-                                Voir sur LinkedIn
-                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
-                            </a>
+            document.getElementById('msgView').innerHTML = `
+                <div class="msg-header">
+                    <div class="msg-header-left">
+                        <div class="avatar">${name.charAt(0)}</div>
+                        <div class="msg-header-info">
+                            <h2>${name}</h2>
+                            <a href="${url}" target="_blank">Voir sur LinkedIn ↗</a>
                         </div>
                     </div>
-                    <div class="flex gap-2">
-                         <button class="px-3 py-1.5 text-sm font-medium text-slate-600 border border-slate-300 rounded hover:bg-slate-50">Qualifier</button>
-                         <button class="px-3 py-1.5 text-sm font-medium text-white bg-blue-600 rounded hover:bg-blue-700">Archiver</button>
+                    <div class="msg-actions">
+                        <button class="btn btn-outline">Qualifier</button>
+                        <button class="btn btn-primary">Archiver</button>
                     </div>
                 </div>
-
-                <!-- Messages Area -->
-                <div class="flex-1 overflow-y-auto p-6 bg-slate-50 space-y-6" id="messages-container">
-                    ${renderMessages(conv.messages)}
-                </div>
-
-                <!-- Input Area (Placeholder) -->
-                <div class="p-4 bg-white border-t border-slate-200">
-                    <div class="relative">
-                        <textarea class="w-full border border-slate-300 rounded-lg p-3 pr-12 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none" rows="3" placeholder="Écrivez votre réponse ou générez-là avec l'IA..."></textarea>
-                        <button class="absolute right-3 bottom-3 p-2 text-blue-600 hover:bg-blue-50 rounded-full transition" title="Générer avec IA">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                <div class="msg-body">${msgs.length ? msgs.map(m => `
+                    <div class="msg-bubble ${m.sender === 'me' ? 'me' : 'them'}">
+                        ${m.content}
+                        <div class="msg-time">${new Date(m.timestamp).toLocaleString()}</div>
+                    </div>
+                `).join('') : '<div class="loading">Aucun message</div>'}</div>
+                <div class="msg-input-area">
+                    <div class="msg-input-wrapper">
+                        <textarea id="msgTextarea" name="msgTextarea" class="msg-textarea" rows="3" placeholder="Écrivez votre réponse..."></textarea>
+                        <button class="ai-btn" title="Générer avec IA">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
                         </button>
                     </div>
                 </div>
             `;
-
-            // Scroll to bottom
-            const container = document.getElementById('messages-container');
-            container.scrollTop = container.scrollHeight;
-        }
-
-        function renderMessages(messages) {
-            if (!messages || messages.length === 0) return '<div class="text-center text-slate-400 my-10">Aucun message</div>';
-
-            return messages
-                .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp))
-                .map(msg => {
-                    const isMe = msg.sender === 'me';
-                    return `
-                        <div class="flex w-full ${isMe ? 'justify-end' : 'justify-start'}">
-                            <div class="max-w-[70%] ${isMe ? 'bg-blue-600 text-white rounded-l-2xl rounded-tr-2xl' : 'bg-white border border-slate-200 text-slate-800 rounded-r-2xl rounded-tl-2xl'} px-5 py-3 shadow-sm">
-                                <p class="text-sm leading-relaxed">${msg.content}</p>
-                                <p class="text-[10px] mt-1 opacity-70 ${isMe ? 'text-blue-100 text-right' : 'text-slate-400'}">${new Date(msg.timestamp).toLocaleString()}</p>
-                            </div>
-                        </div>
-                    `;
-                }).join('');
+            load();
         }
 
         function updateStats(convs) {
-            document.getElementById('stat-prospects').textContent = convs.length;
-
-            // "Urgent": msg from 'them' (unread handling simplified here)
-            const urgentCount = convs.filter(c => c.lastMsg && c.lastMsg.sender !== 'me').length;
-            document.getElementById('stat-urgent').textContent = urgentCount;
-
-            const oppCount = convs.filter(c => c.engagement_level === 'hot' || c.engagement_level === 'warm').length;
-            document.getElementById('stat-opportunities').textContent = oppCount;
+            document.getElementById('statProspects').textContent = convs.length;
+            document.getElementById('statUrgent').textContent = convs.filter(c => c.lastMsg?.sender !== 'me').length;
+            document.getElementById('statOpportunities').textContent = convs.filter(c => ['hot', 'warm'].includes(c.engagement_level)).length;
         }
 
-        function timeSince(date) {
-            const seconds = Math.floor((new Date() - date) / 1000);
-            let interval = seconds / 31536000;
-            if (interval > 1) return Math.floor(interval) + " an(s)";
-            interval = seconds / 2592000;
-            if (interval > 1) return Math.floor(interval) + " mois";
-            interval = seconds / 86400;
-            if (interval > 1) return Math.floor(interval) + " j";
-            interval = seconds / 3600;
-            if (interval > 1) return Math.floor(interval) + " h";
-            interval = seconds / 60;
-            if (interval > 1) return Math.floor(interval) + " min";
-            return "à l'instant";
-        }
-
-        async function triggerScrape() {
-            const btn = document.querySelector('button[onclick="triggerScrape()"]');
-            const originalText = btn.innerHTML;
-            btn.innerHTML = `<svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Synchronisation...`;
-            btn.disabled = true;
-
+        document.getElementById('syncBtn').onclick = async function () {
+            this.disabled = true;
+            this.innerHTML = '<div class="spinner" style="width:16px;height:16px;border-width:2px;margin:0"></div> Sync...';
             try {
                 await fetch(`${SUPABASE_URL}/functions/v1/scrape-linkedin`, {
                     method: 'POST',
                     headers: { 'Authorization': `Bearer ${SUPABASE_KEY}` }
                 });
-                alert('Synchronisation lancée ! Les messages arriveront dans quelques instants.');
-            } catch (e) {
-                alert('Erreur lors du lancement du scraping.');
-            } finally {
-                btn.innerHTML = originalText;
-                btn.disabled = false;
-                setTimeout(loadConversations, 5000); // Reload after delay
-            }
-        }
+                alert('Synchronisation lancée !');
+            } catch (e) { alert('Erreur'); }
+            this.disabled = false;
+            this.innerHTML = '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:16px;height:16px"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg> Sync LinkedIn';
+            setTimeout(load, 3000);
+        };
 
-        // Init
-        loadConversations();
-
-        // Realtime
-        supabaseClient.channel('public:conversations')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'conversations' }, loadConversations)
-            .subscribe();
+        load();
+        db.channel('changes').on('postgres_changes', { event: '*', schema: 'public', table: 'conversations' }, load).subscribe();
     </script>
 </body>
 
