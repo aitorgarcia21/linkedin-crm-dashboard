@@ -29,8 +29,8 @@ async function scrapeLinkedIn() {
 
     try {
         console.log('🔐 Logging into LinkedIn...');
-        // Go to generic login page
-        await page.goto('https://www.linkedin.com/login', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        // Go to specific login page to reduce redirects
+        await page.goto('https://www.linkedin.com/login?trk=guest_homepage-basic_nav-header-signin', { waitUntil: 'domcontentloaded', timeout: 60000 });
 
         await page.waitForTimeout(3000);
 
@@ -47,8 +47,8 @@ async function scrapeLinkedIn() {
         // Wait for ANY login selector to appear
         try {
             await Promise.any([
-                page.waitForSelector('input[name="session_key"]', { timeout: 30000 }),
-                page.waitForSelector('#username', { timeout: 30000 })
+                page.waitForSelector('input[name="session_key"]', { timeout: 60000 }),
+                page.waitForSelector('#username', { timeout: 60000 })
             ]);
         } catch (e) {
             console.log('⏳ Timeout waiting for login form');
@@ -60,8 +60,10 @@ async function scrapeLinkedIn() {
         if (!sessionKey) {
             const pageUrl = page.url();
             const pageTitle = await page.title();
+            const pageContent = await page.evaluate(() => document.body.innerText.substring(0, 500));
             console.log('⚠️ Login form not found!');
             console.log('📍 Page Title:', pageTitle);
+            console.log('📍 Page Content Preview:', pageContent);
             console.log('📍 Page URL:', pageUrl);
             throw new Error(`Login form not found - Page: ${pageTitle} at ${pageUrl}`);
         }
