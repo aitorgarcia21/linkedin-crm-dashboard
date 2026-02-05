@@ -57,15 +57,18 @@ async function scrapeLinkedIn() {
         // Check for login form with multiple selectors
         const sessionKey = await page.$('input[name="session_key"]') || await page.$('#username');
 
+        // Add country targeting to username for stronger enforcement
+        const [user, pass] = AUTH.split(':');
+        const AUTH_US = `${user}-country-us:${pass}`;
+        const SBR_WS_ENDPOINT = `wss://${AUTH_US}@brd.superproxy.io:9222`;
+        // ... (keep existing code) ...
+
         if (!sessionKey) {
             const pageUrl = page.url();
             const pageTitle = await page.title();
             const pageContent = await page.evaluate(() => document.body.innerText.substring(0, 500));
             console.log('⚠️ Login form not found!');
-            console.log('📍 Page Title:', pageTitle);
-            console.log('📍 Page Content Preview:', pageContent);
-            console.log('📍 Page URL:', pageUrl);
-            throw new Error(`Login form not found - Page: ${pageTitle} at ${pageUrl}`);
+            throw new Error(`Login form not found - Page: ${pageTitle} at ${pageUrl} - Content: ${pageContent}`);
         }
 
         console.log('📝 Filling credentials...');
