@@ -44,6 +44,16 @@ async function scrapeLinkedIn() {
             }
         } catch (e) { console.log('🍪 No cookie banner found'); }
 
+        // Wait for ANY login selector to appear
+        try {
+            await Promise.any([
+                page.waitForSelector('input[name="session_key"]', { timeout: 30000 }),
+                page.waitForSelector('#username', { timeout: 30000 })
+            ]);
+        } catch (e) {
+            console.log('⏳ Timeout waiting for login form');
+        }
+
         // Check for login form with multiple selectors
         const sessionKey = await page.$('input[name="session_key"]') || await page.$('#username');
 
