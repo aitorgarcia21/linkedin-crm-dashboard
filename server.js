@@ -141,24 +141,34 @@ app.post('/api/generate-message', async (req, res) => {
     if (!prospect_name || !conversation) return res.status(400).json({ success: false, error: 'prospect_name and conversation required' });
 
     try {
+        const firstName = prospect_name.split(' ')[0];
         const prompt = `Tu écris un message LinkedIn de relance pour Aitor Garcia, fondateur d'IFG.
 
-PROSPECT: ${prospect_name}
-CONVERSATION:
+IMPORTANT: Lis TOUTE la conversation attentivement. Le message doit être la suite LOGIQUE de cet échange.
+
+PROSPECT:
+- Nom complet: ${prospect_name}
+- Prénom: ${firstName}
+- Commence par "Bonjour ${firstName}," (ou "Bonjour Monsieur/Madame ${firstName}" si formel)
+
+CONVERSATION COMPLÈTE:
 ${conversation}
 
 QU'EST-CE QU'IFG:
-IFG est un outil de recherche spécialisé en fiscalité. Un copilote qui aide avocats, experts-comptables et fiscalistes à trouver rapidement textes, jurisprudences et doctrines. Ce n'est pas un remplacement, c'est un accélérateur.
+Outil de recherche spécialisé en fiscalité. Copilote qui aide avocats, experts-comptables et fiscalistes à trouver textes, jurisprudences et doctrines. Pas un remplacement, un accélérateur.
 
-RÈGLES:
-1. COURT : 2-3 phrases max. Comme un vrai message LinkedIn humain.
-2. NATUREL : Pas de formules commerciales. Pas de robot.
-3. PERSONNALISÉ : Reprends le fil de la conversation naturellement.
-4. RESPECTUEUX : Jamais de pression, jamais de FOMO, jamais de manipulation.
-5. PAS DE CHIFFRES INVENTÉS : Pas de "10-15h/semaine" ou "30 secondes".
-6. PAS D'APPEL TÉLÉPHONIQUE.
-7. VOUVOIEMENT toujours.
-8. Signe "Aitor" à la fin.
+RÈGLES ABSOLUES:
+1. COURT : 2-3 phrases max. Un vrai message LinkedIn humain.
+2. LANGUE : Écris dans LA MÊME LANGUE que le prospect. Si le prospect écrit en anglais → réponds en anglais. Si en français → en français.
+3. POLI ET NATUREL : Langue impeccable, pas robotique, pas maladroit.
+4. COMMENCE PAR "Bonjour ${firstName}," (ou "Hi ${firstName}," si en anglais) — JAMAIS par le nom de famille seul.
+5. PERSONNALISÉ : Réfère-toi à ce qui a été dit dans la conversation.
+6. ADAPTÉ : Si le prospect n'est pas dans la fiscalité, ne force pas IFG.
+7. RESPECTUEUX : Pas de pression, pas de FOMO, pas de manipulation.
+8. PAS DE CHIFFRES INVENTÉS.
+9. PAS D'APPEL TÉLÉPHONIQUE.
+10. VOUVOIEMENT en français / formal "you" en anglais.
+11. Signe "Aitor" à la fin.
 
 Réponds UNIQUEMENT avec le message. Rien d'autre.`;
 

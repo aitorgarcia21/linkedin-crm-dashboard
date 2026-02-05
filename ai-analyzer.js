@@ -202,51 +202,55 @@ async function generateFollowUpMessage(prospectName, profileData, conversationHi
             `${msg.sender === 'me' ? 'Moi' : prospectName}: ${msg.content}`
         ).join('\n\n');
 
-        // Determine proper title based on job
-        const isLawyer = profileData.job_title?.toLowerCase().includes('avocat') || 
-                        profileData.job_title?.toLowerCase().includes('counsel');
-        const title = isLawyer ? 'Maître' : prospectName.split(' ').pop(); // Last name for non-lawyers
+        // Determine proper greeting
+        const firstName = prospectName.split(' ')[0]; // PRÉNOM = premier mot
+        const jobLower = (profileData.job_title || '').toLowerCase();
+        const isLawyer = jobLower.includes('avocat') || jobLower.includes('counsel') || jobLower.includes('notaire');
+        // Maître pour avocats/notaires, sinon Monsieur/Madame + prénom
+        const greeting = isLawyer ? `Maître ${firstName}` : firstName;
 
         const prompt = `Tu écris un message LinkedIn de relance pour Aitor Garcia, fondateur d'IFG.
 
+IMPORTANT: Lis TOUTE la conversation ci-dessous attentivement avant d'écrire. Le message doit être la suite LOGIQUE de cette conversation.
+
 PROSPECT:
-- Nom: ${prospectName} (appelle-le "${title}")
+- Nom complet: ${prospectName}
+- Prénom: ${firstName}
+- Comment s'adresser: "Bonjour ${greeting}" (ou "Bonjour Monsieur/Madame ${firstName}" si tu ne connais pas le genre)
 - Poste: ${profileData.job_title || '?'}
 - Entreprise: ${profileData.company || '?'}
 - Secteur: ${profileData.sector || '?'}
 - Score: ${analysis.lead_score}/100 (${analysis.lead_status})
 - Intérêt: ${analysis.interest_level}
-- Points clés conversation: ${analysis.key_points.join(', ')}
+- Points clés: ${analysis.key_points.join(', ')}
 ${ifgStatus.has_tested ? '- A DÉJÀ TESTÉ IFG' : ''}
 ${ifgStatus.is_subscriber ? '- EST ABONNÉ IFG' : ''}
 
-CONVERSATION PRÉCÉDENTE:
+CONVERSATION COMPLÈTE (lis tout attentivement):
 ${conversationText}
 
 QU'EST-CE QU'IFG:
-IFG est un outil de recherche spécialisé en fiscalité. C'est un assistant qui aide les professionnels (avocats, experts-comptables, fiscalistes) à trouver rapidement les textes, jurisprudences et doctrines pertinents. Ce n'est PAS un remplacement — c'est un copilote qui accélère leur travail de recherche.
+IFG est un outil de recherche spécialisé en fiscalité. Un copilote qui aide avocats, experts-comptables et fiscalistes à trouver rapidement textes, jurisprudences et doctrines. Ce n'est pas un remplacement, c'est un accélérateur de recherche.
 
-RÈGLES ABSOLUES DU MESSAGE:
-1. COURT : 2-3 phrases maximum. Comme un vrai message LinkedIn entre humains.
-2. NATUREL : Écris comme un humain, pas comme un robot commercial. Pas de formules toutes faites.
-3. PERSONNALISÉ : Réfère-toi à ce qui a été dit dans la conversation. Reprends le fil naturellement.
-4. RESPECTUEUX : Jamais de pression, jamais de FOMO, jamais de manipulation. Pas de "vos confrères font déjà X".
-5. PAS DE CHIFFRES INVENTÉS : Ne dis pas "10-15h/semaine" ou "30 secondes". Pas de stats sorties de nulle part.
-6. PAS D'APPEL TÉLÉPHONIQUE : Ne propose jamais d'appel.
-7. SIMPLE : Une question ouverte ou une proposition concrète. Pas de pitch.
-8. VOUVOIEMENT toujours.
-9. Signe "Aitor" à la fin.
+RÈGLES ABSOLUES:
+1. COURT : 2-3 phrases max. Un vrai message LinkedIn humain.
+2. LANGUE : Écris dans LA MÊME LANGUE que le prospect utilise dans la conversation. Si le prospect écrit en anglais → réponds en anglais. Si en français → en français. TOUJOURS respecter la langue du prospect.
+3. POLI ET NATUREL : Écris dans une langue impeccable et naturelle. Pas de formulations maladroites ou robotiques.
+4. COMMENCE PAR "Bonjour ${greeting}," (ou "Hello ${firstName}," / "Hi ${firstName}," si en anglais) — JAMAIS par le nom de famille seul.
+5. PERSONNALISÉ : Réfère-toi PRÉCISÉMENT à ce qui a été dit dans la conversation. Si le prospect a parlé d'un sujet, rebondis dessus.
+6. ADAPTÉ AU PROFIL : Adapte le ton au poste et à l'entreprise du prospect. Un avocat ≠ un consultant ≠ un directeur fiscal.
+7. RESPECTUEUX : Jamais de pression, jamais de FOMO, jamais de manipulation.
+8. PAS DE CHIFFRES INVENTÉS.
+9. PAS D'APPEL TÉLÉPHONIQUE.
+10. VOUVOIEMENT en français / formal "you" en anglais.
+11. Signe "Aitor" à la fin.
+12. Si le prospect travaille dans un domaine qui n'est PAS directement lié à la fiscalité, adapte le message en conséquence (ne force pas IFG si ça ne colle pas).
 
 SELON LE CONTEXTE:
-- Si le prospect a montré de l'intérêt → propose simplement de tester avec 5 questions gratuites
-- Si le prospect a déjà testé → demande son retour d'expérience, ce qui lui a plu ou manqué
-- Si le prospect est froid → rebondis sur un élément de son profil ou de la conversation, pose une question sincère
-- Si le prospect n'a pas répondu → message ultra court, juste une relance douce ("${title}, est-ce que vous avez eu le temps d'y jeter un œil ?")
-
-EXEMPLES DE BON TON:
-- "Bonjour ${title}, suite à notre échange, je me demandais si vous aviez eu l'occasion de tester. N'hésitez pas si vous avez des questions. Aitor"
-- "${title}, j'espère que tout va bien. Je reste disponible si le sujet recherche fiscale revient sur la table. Aitor"
-- "Bonjour ${title}, votre remarque sur [sujet de la conv] m'a fait réfléchir. On a justement travaillé là-dessus. Ça vous dit d'essayer ? Aitor"
+- Prospect intéressé → propose de tester (5 questions gratuites sur ifg.tax)
+- Prospect a déjà testé → demande son retour, ce qui lui a plu ou manqué
+- Prospect froid / pas répondu → relance douce et courte
+- Prospect dans un domaine non-fiscal → sois honnête, demande si la recherche fiscale fait partie de ses missions
 
 Réponds UNIQUEMENT avec le message. Rien d'autre.`;
 

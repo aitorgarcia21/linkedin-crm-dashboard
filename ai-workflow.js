@@ -36,12 +36,38 @@ async function processConversationsWithAI() {
         return { success: false, error: convError };
     }
 
-    // Filter: skip no-messages, already analyzed <24h, already ignored
+    // IFG keywords — if NO message contains any of these, conversation is irrelevant
+    const IFG_KEYWORDS = ['ifg', 'ifg.tax', 'recherche fiscale', 'fiscalité', 'fiscal', 'copilote',
+        'moteur de recherche', 'bofip', 'cgi', 'jurisprudence', 'doctrine', 'expert-comptable',
+        'avocat fiscaliste', 'droit fiscal', '195 juridictions', 'aitor'];
+
+    function isRelevantConversation(msgs) {
+        const allText = msgs.map(m => (m.content || '').toLowerCase()).join(' ');
+        return IFG_KEYWORDS.some(kw => allText.includes(kw));
+    }
+
+    // Pre-filter: delete irrelevant conversations BEFORE wasting Kimi API calls
     const now = Date.now();
-    const toAnalyze = conversations.filter(conv => {
+    let deletedCount = 0;
+    for (const conv of conversations) {
+        const msgs = conv.messages || [];
+        if (msgs.length > 0 && !isRelevantConversation(msgs)) {
+            // Not about IFG at all → DELETE from DB
+            await supabase.from('follow_up_messages').delete().eq('conversation_id', conv.id);
+            await supabase.from('ai_analysis').delete().eq('conversation_id', conv.id);
+            await supabase.from('messages').delete().eq('conversation_id', conv.id);
+            await supabase.from('conversations').delete().eq('id', conv.id);
+            deletedCount++;
+        }
+    }
+    if (deletedCount > 0) console.log(`🗑️ ${deletedCount} conversations hors-sujet supprimées`);
+
+    // Filter: skip no-messages, already analyzed <24h, already ignored
+    const remaining = conversations.filter(conv => {
         const msgs = conv.messages || [];
         if (msgs.length === 0) return false;
         if (!conv.prospects?.name) return false;
+        if (!isRelevantConversation(msgs)) return false; // already deleted above, but safety check
         
         const existing = Array.isArray(conv.ai_analysis) ? conv.ai_analysis[0] : conv.ai_analysis;
         if (existing?.analyzed_at) {
@@ -52,7 +78,8 @@ async function processConversationsWithAI() {
         return true;
     });
 
-    console.log(`📊 ${conversations.length} conversations, ${toAnalyze.length} à analyser (skip ${conversations.length - toAnalyze.length} déjà faits)`);
+    const toAnalyze = remaining;
+    console.log(`📊 ${conversations.length} conversations, ${toAnalyze.length} à analyser (${deletedCount} supprimées, ${conversations.length - toAnalyze.length - deletedCount} skip)`);
 
     if (toAnalyze.length === 0) {
         console.log('✅ Rien à analyser !');
@@ -101,20 +128,13 @@ async function analyzeOneConversation(supabase, conv, results) {
             return false;
         }
 
-        // Irrelevant
+        // Irrelevant → DELETE entirely
         if (analysis.is_relevant === false) {
-            console.log(`   🚫 ${prospect.name}: non pertinent`);
-            await Promise.all([
-                supabase.from('ai_analysis').upsert({
-                    conversation_id: conv.id, lead_score: 0, lead_status: 'cold',
-                    sentiment: 'neutral', interest_level: 'none', has_tested_ifg: false,
-                    key_points: [], recommended_action: 'ignore', follow_up_timing: 'none',
-                    personalization_hints: [],
-                    reasoning: `NON PERTINENT: ${analysis.irrelevant_reason || 'Sans rapport IFG'}`,
-                    analyzed_at: new Date().toISOString()
-                }, { onConflict: 'conversation_id' }),
-                supabase.from('conversations').update({ engagement_level: 'irrelevant', status: 'archived' }).eq('id', conv.id)
-            ]);
+            console.log(`   �️ ${prospect.name}: non pertinent → supprimé`);
+            await supabase.from('follow_up_messages').delete().eq('conversation_id', conv.id);
+            await supabase.from('ai_analysis').delete().eq('conversation_id', conv.id);
+            await supabase.from('messages').delete().eq('conversation_id', conv.id);
+            await supabase.from('conversations').delete().eq('id', conv.id);
             results.analyzed++;
             return true;
         }
