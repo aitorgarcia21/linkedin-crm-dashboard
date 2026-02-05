@@ -1125,6 +1125,185 @@
         .pipeline-card-actions button.move-lost { color: #6B7280; border-color: #D1D5DB; }
         .pipeline-card-actions button.move-lost:hover { background: #F9FAFB; }
 
+        /* Analysis Report Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-overlay.active { display: flex; }
+
+        .modal {
+            background: #fff;
+            border-radius: 16px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+            padding: 24px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        .modal h2 { font-size: 18px; font-weight: 700; margin-bottom: 16px; }
+        .modal-close { float: right; background: none; border: none; font-size: 20px; cursor: pointer; color: #6B7280; }
+
+        .report-step {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            background: #F9FAFB;
+            border: 1px solid #E5E7EB;
+        }
+        .report-step.running { background: #FEF3C7; border-color: #FCD34D; }
+        .report-step.done { background: #ECFDF5; border-color: #6EE7B7; }
+        .report-step.error { background: #FEF2F2; border-color: #FCA5A5; }
+        .report-step-icon { font-size: 20px; }
+        .report-step-info { flex: 1; }
+        .report-step-info h4 { font-size: 13px; font-weight: 600; }
+        .report-step-info p { font-size: 11px; color: #6B7280; margin-top: 2px; }
+        .report-step-badge { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 8px; }
+
+        .report-summary {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-top: 16px;
+        }
+        .report-stat {
+            text-align: center;
+            padding: 12px;
+            border-radius: 8px;
+            background: #F9FAFB;
+            border: 1px solid #E5E7EB;
+        }
+        .report-stat .val { font-size: 20px; font-weight: 700; }
+        .report-stat .lbl { font-size: 10px; color: #6B7280; margin-top: 2px; }
+
+        /* Kimi Chatbot */
+        .chatbot-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 999;
+        }
+
+        .chatbot-toggle {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #3B82F6, #8B5CF6);
+            border: none;
+            color: #fff;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 4px 20px rgba(59,130,246,0.4);
+            transition: transform 0.2s;
+        }
+        .chatbot-toggle:hover { transform: scale(1.1); }
+
+        .chatbot-panel {
+            display: none;
+            position: absolute;
+            bottom: 70px;
+            right: 0;
+            width: 380px;
+            max-height: 500px;
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            overflow: hidden;
+            flex-direction: column;
+        }
+        .chatbot-panel.open { display: flex; }
+
+        .chatbot-header {
+            padding: 14px 16px;
+            background: linear-gradient(135deg, #3B82F6, #8B5CF6);
+            color: #fff;
+            font-weight: 700;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .chatbot-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            max-height: 340px;
+            min-height: 200px;
+        }
+
+        .chat-msg {
+            margin-bottom: 12px;
+            max-width: 85%;
+        }
+        .chat-msg.user {
+            margin-left: auto;
+            background: #3B82F6;
+            color: #fff;
+            padding: 8px 12px;
+            border-radius: 12px 12px 2px 12px;
+            font-size: 13px;
+        }
+        .chat-msg.bot {
+            background: #F3F4F6;
+            color: #111827;
+            padding: 10px 14px;
+            border-radius: 12px 12px 12px 2px;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+        .chat-msg.bot pre {
+            background: #E5E7EB;
+            padding: 8px;
+            border-radius: 6px;
+            font-size: 11px;
+            overflow-x: auto;
+            margin: 6px 0;
+        }
+        .chat-typing {
+            color: #9CA3AF;
+            font-size: 12px;
+            font-style: italic;
+        }
+
+        .chatbot-input {
+            display: flex;
+            border-top: 1px solid #E5E7EB;
+            padding: 8px;
+        }
+        .chatbot-input input {
+            flex: 1;
+            border: 1px solid #E5E7EB;
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-size: 13px;
+            outline: none;
+        }
+        .chatbot-input input:focus { border-color: #3B82F6; }
+        .chatbot-input button {
+            margin-left: 6px;
+            background: #3B82F6;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 8px 14px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .chatbot-input button:hover { background: #2563EB; }
+        .chatbot-input button:disabled { background: #9CA3AF; cursor: not-allowed; }
+
         /* Nav badge */
         .nav-badge {
             background: #EF4444;
@@ -1540,6 +1719,9 @@
             </nav>
         </div>
         <div class="sidebar-footer">
+            <button class="sync-btn" id="analyzeBtn" style="background:linear-gradient(135deg,#3B82F6,#8B5CF6);color:#fff;margin-bottom:8px;font-weight:700">
+                🤖 Lancer l'analyse Kimi
+            </button>
             <button class="sync-btn" id="syncBtn">
                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -1964,11 +2146,11 @@
         // Update leads badge on load
         async function updateLeadsBadge() {
             try {
-                const res = await fetch(`${API_URL}/api/hot-leads`);
+                const res = await fetch(`${API_URL}/api/contact-today`);
                 const data = await res.json();
                 const badge = document.getElementById('leadsNavBadge');
-                if (data.success && data.summary.total > 0) {
-                    badge.textContent = data.summary.total;
+                if (data.success && data.summary.contact_today > 0) {
+                    badge.textContent = data.summary.contact_today;
                     badge.style.display = 'inline';
                 } else {
                     badge.style.display = 'none';
@@ -1978,7 +2160,7 @@
         updateLeadsBadge();
         setInterval(updateLeadsBadge, 60000);
 
-        // ===== LEADS VIEW =====
+        // ===== LEADS VIEW (Contact Today - YC Sequence) =====
         async function loadLeads() {
             const loading = document.getElementById('leadsLoading');
             const content = document.getElementById('leadsContent');
@@ -1986,16 +2168,16 @@
             content.innerHTML = '';
 
             try {
-                const res = await fetch(`${API_URL}/api/hot-leads`);
+                const res = await fetch(`${API_URL}/api/contact-today`);
                 const data = await res.json();
 
                 loading.style.display = 'none';
 
-                if (!data.success || data.summary.total === 0) {
+                if (!data.success || (data.summary.contact_today === 0 && data.summary.contact_soon === 0)) {
                     content.innerHTML = `<div class="leads-empty">
                         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                         <p>Aucun lead à contacter pour le moment</p>
-                        <p style="font-size:12px;margin-top:8px">Lancez une analyse IA pour générer vos listes</p>
+                        <p style="font-size:12px;margin-top:8px">Lancez un sync pour analyser vos conversations</p>
                     </div>`;
                     return;
                 }
@@ -2005,32 +2187,56 @@
                 // Summary bar
                 html += `<div style="display:flex;gap:16px;margin-bottom:24px;flex-wrap:wrap">
                     <div style="background:#FEE2E2;padding:12px 20px;border-radius:10px;flex:1;min-width:140px">
-                        <div style="font-size:24px;font-weight:700;color:#991B1B">${data.summary.urgent}</div>
-                        <div style="font-size:12px;color:#991B1B;font-weight:600">⚡ Urgent</div>
+                        <div style="font-size:24px;font-weight:700;color:#991B1B">${data.summary.contact_today}</div>
+                        <div style="font-size:12px;color:#991B1B;font-weight:600">🎯 Contacter aujourd'hui</div>
                     </div>
                     <div style="background:#FEF3C7;padding:12px 20px;border-radius:10px;flex:1;min-width:140px">
-                        <div style="font-size:24px;font-weight:700;color:#92400E">${data.summary.today}</div>
-                        <div style="font-size:12px;color:#92400E;font-weight:600">📅 Aujourd'hui</div>
+                        <div style="font-size:24px;font-weight:700;color:#92400E">${data.summary.contact_soon}</div>
+                        <div style="font-size:12px;color:#92400E;font-weight:600">📅 Bientôt (< 3j)</div>
                     </div>
                     <div style="background:#DBEAFE;padding:12px 20px;border-radius:10px;flex:1;min-width:140px">
-                        <div style="font-size:24px;font-weight:700;color:#1E40AF">${data.summary.this_week}</div>
-                        <div style="font-size:12px;color:#1E40AF;font-weight:600">📆 Cette semaine</div>
+                        <div style="font-size:24px;font-weight:700;color:#1E40AF">${data.summary.total_active}</div>
+                        <div style="font-size:12px;color:#1E40AF;font-weight:600">� Prospects actifs</div>
+                    </div>
+                    <div style="background:#F3F4F6;padding:12px 20px;border-radius:10px;flex:1;min-width:140px">
+                        <div style="font-size:24px;font-weight:700;color:#6B7280">${data.summary.sequence_complete}</div>
+                        <div style="font-size:12px;color:#6B7280;font-weight:600">✅ Séquences terminées</div>
                     </div>
                 </div>`;
 
-                // Urgent section
-                if (data.lists.urgent.length) {
-                    html += renderLeadSection('⚡ Urgent — Répondre maintenant', data.lists.urgent, 'urgent');
+                // Contact today section
+                if (data.lists.contact_today.length) {
+                    html += renderLeadSection('🎯 Contacter AUJOURD\'HUI', data.lists.contact_today, 'urgent');
                 }
 
-                // Today section
-                if (data.lists.today.length) {
-                    html += renderLeadSection('📅 Aujourd\'hui — Relances prévues', data.lists.today, 'today');
+                // Contact soon section
+                if (data.lists.contact_soon.length) {
+                    html += renderLeadSection('📅 Bientôt (dans les 3 prochains jours)', data.lists.contact_soon, 'today');
                 }
 
-                // This week section
-                if (data.lists.this_week.length) {
-                    html += renderLeadSection('📆 Cette semaine', data.lists.this_week, 'week');
+                // Sequence complete section
+                if (data.lists.sequence_complete.length) {
+                    html += `<div class="leads-section">
+                        <div class="leads-section-header">
+                            <h3>✅ Séquences terminées</h3>
+                            <span class="leads-count week">${data.lists.sequence_complete.length}</span>
+                        </div>`;
+                    data.lists.sequence_complete.forEach(lead => {
+                        html += `<div class="lead-card week" style="opacity:0.7">
+                            <div class="lead-card-header">
+                                <div class="lead-card-info">
+                                    <h4>${lead.name}</h4>
+                                    <p>${lead.job_title || ''} ${lead.company ? '@ ' + lead.company : ''}</p>
+                                </div>
+                                <span class="lead-score-badge ${lead.lead_status}">${lead.lead_score}/100</span>
+                            </div>
+                            <div class="lead-card-reason">Séquence ${lead.sequence_key} terminée</div>
+                            <div class="lead-card-actions">
+                                <a class="btn-linkedin" href="${lead.linkedin_url}" target="_blank">🔗 Ouvrir LinkedIn</a>
+                            </div>
+                        </div>`;
+                    });
+                    html += `</div>`;
                 }
 
                 content.innerHTML = html;
@@ -2053,10 +2259,10 @@
                 </div>`;
 
             leads.forEach(lead => {
-                const timerClass = lead.hours_since_last > 72 ? 'overdue' : lead.hours_since_last > 24 ? 'due-soon' : 'scheduled';
-                const timerText = lead.hours_since_last < 24 
-                    ? `${lead.hours_since_last}h` 
-                    : `${Math.round(lead.hours_since_last / 24)}j`;
+                const timerClass = lead.is_overdue ? 'overdue' : lead.days_until_next === 0 ? 'due-soon' : 'scheduled';
+                const timerText = lead.days_since_last === 0 ? "Auj" : `${lead.days_since_last}j`;
+                const seqLabel = `Step ${lead.sequence_step}/${lead.sequence_total}`;
+                const psychLabel = (lead.sequence_psychology || '').replace(/_/g, ' ');
 
                 html += `<div class="lead-card ${type}">
                     <div class="lead-card-header">
@@ -2071,12 +2277,20 @@
                     </div>
                     <div class="lead-card-reason">${lead.reason}</div>
                     <div class="lead-card-meta">
-                        <span class="lead-meta-item">📊 <strong>${lead.lead_status.toUpperCase()}</strong></span>
-                        <span class="lead-meta-item">💬 Dernier msg: <strong>${lead.last_message_by === 'them' ? 'Eux' : 'Moi'}</strong></span>
-                        <span class="lead-meta-item">⏰ Il y a <strong>${timerText}</strong></span>
+                        <span class="lead-meta-item">🎯 <strong>${seqLabel}</strong></span>
+                        <span class="lead-meta-item">🧠 <strong>${psychLabel}</strong></span>
+                        <span class="lead-meta-item">📝 <strong>${lead.message_style}</strong></span>
+                        <span class="lead-meta-item">💬 Dernier: <strong>${lead.last_message_by === 'them' ? 'EUX ⚡' : 'Moi'}</strong></span>
+                        <span class="lead-meta-item">📊 <strong>${(lead.lead_status || '').toUpperCase()}</strong></span>
                         ${lead.has_tested_ifg ? '<span class="lead-meta-item">✅ <strong>A testé IFG</strong></span>' : ''}
-                        ${lead.interest_level ? '<span class="lead-meta-item">🎯 Intérêt: <strong>' + lead.interest_level + '</strong></span>' : ''}
+                        <span class="lead-meta-item">� Priorité: <strong>${lead.priority}/100</strong></span>
                     </div>`;
+
+                // Sequence goal
+                html += `<div style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:6px;padding:8px 12px;margin-bottom:10px;font-size:12px">
+                    <strong>🎯 Objectif:</strong> ${lead.sequence_goal}<br>
+                    <strong>📋 Instruction Kimi:</strong> <em>${lead.kimi_instruction}</em>
+                </div>`;
 
                 // Key points
                 if (lead.key_points && lead.key_points.length) {
@@ -2085,23 +2299,11 @@
                     </div>`;
                 }
 
-                // Message section
-                if (lead.has_pending_message && lead.pending_message) {
-                    html += `<div class="lead-card-message">
-                        <label>💬 Message IA pré-généré (modifiable)</label>
-                        <textarea id="msg-${lead.conversation_id}">${lead.pending_message}</textarea>
-                        <div class="lead-card-actions">
-                            <button class="btn-approve" onclick="approveMessage('${lead.conversation_id}')">✅ Approuver & Copier</button>
-                            <button class="btn-reject" onclick="rejectMessage('${lead.conversation_id}')">❌ Rejeter</button>
-                            <a class="btn-linkedin" href="${lead.linkedin_url}" target="_blank">🔗 Ouvrir LinkedIn</a>
-                        </div>
-                    </div>`;
-                } else {
-                    html += `<div class="lead-card-actions">
-                        <button class="btn-generate" onclick="generateMessage('${lead.conversation_id}')">🤖 Générer message IA</button>
-                        <a class="btn-linkedin" href="${lead.linkedin_url}" target="_blank">🔗 Ouvrir LinkedIn</a>
-                    </div>`;
-                }
+                // Actions
+                html += `<div class="lead-card-actions">
+                    <button class="btn-generate" onclick="generateMessage('${lead.conversation_id}')">🤖 Générer message IA</button>
+                    <a class="btn-linkedin" href="${lead.linkedin_url}" target="_blank">🔗 Ouvrir LinkedIn</a>
+                </div>`;
 
                 html += `</div>`;
             });
@@ -2468,7 +2670,219 @@
 
         load();
         db.channel('changes').on('postgres_changes', { event: '*', schema: 'public', table: 'conversations' }, load).subscribe();
+
+        // ===== ONE-CLICK ANALYSIS =====
+        document.getElementById('analyzeBtn').addEventListener('click', async function() {
+            const btn = this;
+            const modal = document.getElementById('analysisModal');
+            const stepsEl = document.getElementById('analysisSteps');
+            const reportEl = document.getElementById('analysisReport');
+            
+            btn.disabled = true;
+            btn.textContent = '⏳ Analyse en cours...';
+            modal.classList.add('active');
+            reportEl.innerHTML = '';
+
+            stepsEl.innerHTML = `
+                <div class="report-step running" id="step-scrape">
+                    <div class="report-step-icon">📬</div>
+                    <div class="report-step-info"><h4>Scraping LinkedIn</h4><p>Récupération des nouveaux messages...</p></div>
+                    <div class="report-step-badge" style="background:#FEF3C7;color:#92400E">En cours</div>
+                </div>
+                <div class="report-step" id="step-ai">
+                    <div class="report-step-icon">🤖</div>
+                    <div class="report-step-info"><h4>Analyse Kimi K2.5</h4><p>En attente...</p></div>
+                    <div class="report-step-badge" style="background:#F3F4F6;color:#6B7280">Attente</div>
+                </div>
+                <div class="report-step" id="step-list">
+                    <div class="report-step-icon">📋</div>
+                    <div class="report-step-info"><h4>Liste de contacts</h4><p>En attente...</p></div>
+                    <div class="report-step-badge" style="background:#F3F4F6;color:#6B7280">Attente</div>
+                </div>`;
+
+            try {
+                const res = await fetch(`${API_URL}/api/full-analysis`, { method: 'POST' });
+                const data = await res.json();
+
+                if (!data.success) throw new Error(data.error || 'Erreur analyse');
+
+                // Update steps
+                data.steps.forEach(s => {
+                    const el = document.getElementById(`step-${s.step === 'ai_analysis' ? 'ai' : s.step === 'contact_list' ? 'list' : s.step}`);
+                    if (el) {
+                        el.className = `report-step ${s.status === 'done' ? 'done' : 'error'}`;
+                        const badge = el.querySelector('.report-step-badge');
+                        badge.style.background = s.status === 'done' ? '#ECFDF5' : '#FEF2F2';
+                        badge.style.color = s.status === 'done' ? '#065F46' : '#991B1B';
+                        badge.textContent = s.status === 'done' ? `✅ ${(s.duration/1000).toFixed(1)}s` : '❌ Erreur';
+                        const info = el.querySelector('.report-step-info p');
+                        if (s.result) info.textContent = JSON.stringify(s.result).slice(0, 80);
+                    }
+                });
+
+                // Show report
+                const r = data.report;
+                reportEl.innerHTML = `
+                    <h3 style="font-size:15px;font-weight:700;margin:16px 0 12px">📊 Rapport d'analyse</h3>
+                    <div class="report-summary">
+                        <div class="report-stat"><div class="val">${r.conversations_scraped}</div><div class="lbl">Conversations scrapées</div></div>
+                        <div class="report-stat"><div class="val">${r.new_messages_saved}</div><div class="lbl">Nouveaux messages</div></div>
+                        <div class="report-stat"><div class="val">${r.conversations_analyzed}</div><div class="lbl">Analysées par Kimi</div></div>
+                        <div class="report-stat" style="background:#FEE2E2"><div class="val" style="color:#991B1B">🔥 ${r.hot_leads}</div><div class="lbl">Hot leads</div></div>
+                        <div class="report-stat" style="background:#FEF3C7"><div class="val" style="color:#92400E">🟡 ${r.warm_leads}</div><div class="lbl">Warm leads</div></div>
+                        <div class="report-stat" style="background:#DBEAFE"><div class="val" style="color:#1E40AF">🔵 ${r.cold_leads}</div><div class="lbl">Cold leads</div></div>
+                        <div class="report-stat" style="background:#ECFDF5"><div class="val" style="color:#065F46">🎯 ${r.contact_today}</div><div class="lbl">À contacter aujourd'hui</div></div>
+                        <div class="report-stat"><div class="val">📅 ${r.contact_soon}</div><div class="lbl">Bientôt</div></div>
+                        <div class="report-stat"><div class="val">${r.errors}</div><div class="lbl">Erreurs</div></div>
+                    </div>
+                    <p style="text-align:center;margin-top:16px;font-size:12px;color:#6B7280">
+                        Durée totale: ${(data.total_duration_ms/1000).toFixed(1)}s | 
+                        <a href="#" onclick="document.getElementById('analysisModal').classList.remove('active');showView('leads');return false;" style="color:#3B82F6;font-weight:600">→ Voir les leads</a>
+                    </p>`;
+
+                // Refresh data
+                updateLeadsBadge();
+
+            } catch (e) {
+                stepsEl.innerHTML += `<div class="report-step error">
+                    <div class="report-step-icon">❌</div>
+                    <div class="report-step-info"><h4>Erreur</h4><p>${e.message}</p></div>
+                </div>`;
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🤖 Lancer l\'analyse Kimi';
+            }
+        });
+
+        // ===== KIMI CHATBOT =====
+        const chatHistory = [];
+        const chatToggle = document.getElementById('chatbotToggle');
+        const chatPanel = document.getElementById('chatbotPanel');
+        const chatMessages = document.getElementById('chatbotMessages');
+        const chatInput = document.getElementById('chatbotInput');
+        const chatSend = document.getElementById('chatbotSend');
+
+        chatToggle.addEventListener('click', () => {
+            chatPanel.classList.toggle('open');
+            if (chatPanel.classList.contains('open') && chatMessages.children.length === 0) {
+                addBotMessage('Salut Aitor ! 👋 Je suis connecté à toutes tes données Supabase en temps réel. Pose-moi n\'importe quelle question sur ton pipeline, tes leads, ou demande-moi de rédiger un message.');
+            }
+            if (chatPanel.classList.contains('open')) chatInput.focus();
+        });
+
+        chatSend.addEventListener('click', sendChat);
+        chatInput.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat(); } });
+
+        function addUserMessage(text) {
+            const div = document.createElement('div');
+            div.className = 'chat-msg user';
+            div.textContent = text;
+            chatMessages.appendChild(div);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function addBotMessage(text) {
+            const div = document.createElement('div');
+            div.className = 'chat-msg bot';
+            div.innerHTML = text.replace(/\n/g, '<br>').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/`(.*?)`/g, '<code style="background:#E5E7EB;padding:1px 4px;border-radius:3px;font-size:12px">$1</code>');
+            chatMessages.appendChild(div);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            return div;
+        }
+
+        function addTyping() {
+            const div = document.createElement('div');
+            div.className = 'chat-msg bot chat-typing';
+            div.id = 'chatTyping';
+            div.textContent = 'Kimi réfléchit...';
+            chatMessages.appendChild(div);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            return div;
+        }
+
+        async function sendChat() {
+            const q = chatInput.value.trim();
+            if (!q) return;
+
+            chatInput.value = '';
+            addUserMessage(q);
+            chatHistory.push({ role: 'user', content: q });
+
+            chatSend.disabled = true;
+            const typing = addTyping();
+
+            try {
+                const res = await fetch(`${API_URL}/api/kimi-chat`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ question: q, history: chatHistory.slice(-6) })
+                });
+                const data = await res.json();
+                typing.remove();
+
+                if (data.success) {
+                    addBotMessage(data.answer);
+                    chatHistory.push({ role: 'assistant', content: data.answer });
+                    // Show context badge
+                    const ctx = data.context_size;
+                    if (ctx) {
+                        const badge = document.createElement('div');
+                        badge.style.cssText = 'font-size:10px;color:#9CA3AF;text-align:right;margin-top:-8px;margin-bottom:8px';
+                        badge.textContent = `📊 ${ctx.prospects} prospects · ${ctx.analyses} analyses · ${ctx.contact_today} à contacter`;
+                        chatMessages.appendChild(badge);
+                    }
+                } else {
+                    addBotMessage('❌ Erreur: ' + (data.error || 'Impossible de contacter Kimi'));
+                }
+            } catch (e) {
+                typing.remove();
+                addBotMessage('❌ Erreur de connexion: ' + e.message);
+            } finally {
+                chatSend.disabled = false;
+                chatInput.focus();
+            }
+        }
+
+        // Quick questions
+        document.querySelectorAll('.chat-quick-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                chatInput.value = btn.dataset.q;
+                sendChat();
+            });
+        });
     </script>
+
+    <!-- Analysis Report Modal -->
+    <div class="modal-overlay" id="analysisModal">
+        <div class="modal">
+            <button class="modal-close" onclick="document.getElementById('analysisModal').classList.remove('active')">&times;</button>
+            <h2>🤖 Analyse Kimi K2.5</h2>
+            <div id="analysisSteps"></div>
+            <div id="analysisReport"></div>
+        </div>
+    </div>
+
+    <!-- Kimi Chatbot -->
+    <div class="chatbot-container">
+        <div class="chatbot-panel" id="chatbotPanel">
+            <div class="chatbot-header">
+                🤖 Kimi — Assistant Pipeline IFG
+                <span style="margin-left:auto;font-size:11px;opacity:0.8">connecté à Supabase</span>
+            </div>
+            <div class="chatbot-messages" id="chatbotMessages"></div>
+            <div style="padding:6px 12px;display:flex;gap:4px;flex-wrap:wrap;border-top:1px solid #E5E7EB">
+                <button class="chat-quick-btn" data-q="Qui dois-je contacter en priorité aujourd'hui ?" style="font-size:10px;padding:3px 8px;border-radius:12px;border:1px solid #E5E7EB;background:#F9FAFB;cursor:pointer;color:#374151">🎯 Priorités du jour</button>
+                <button class="chat-quick-btn" data-q="Donne-moi un résumé de mon pipeline" style="font-size:10px;padding:3px 8px;border-radius:12px;border:1px solid #E5E7EB;background:#F9FAFB;cursor:pointer;color:#374151">📊 Résumé pipeline</button>
+                <button class="chat-quick-btn" data-q="Rédige un message pour mon meilleur hot lead" style="font-size:10px;padding:3px 8px;border-radius:12px;border:1px solid #E5E7EB;background:#F9FAFB;cursor:pointer;color:#374151">✍️ Rédiger message</button>
+                <button class="chat-quick-btn" data-q="Quels sont les patterns qui marchent le mieux ?" style="font-size:10px;padding:3px 8px;border-radius:12px;border:1px solid #E5E7EB;background:#F9FAFB;cursor:pointer;color:#374151">📈 Patterns</button>
+            </div>
+            <div class="chatbot-input">
+                <input type="text" id="chatbotInput" placeholder="Demande à Kimi..." />
+                <button id="chatbotSend">Envoyer</button>
+            </div>
+        </div>
+        <button class="chatbot-toggle" id="chatbotToggle">🤖</button>
+    </div>
 </body>
 
 </html>
