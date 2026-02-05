@@ -218,6 +218,154 @@ app.post('/api/full-analysis', async (req, res) => {
     }
 });
 
+// Converted prospects: cross-reference IFG auth.users + pre_registrations with LinkedIn prospects
+app.get('/api/converted', async (req, res) => {
+    try {
+        const supabaseUrl = process.env.SUPABASE_URL || 'https://igyxcobujacampiqndpf.supabase.co';
+        const supabaseKey = process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_KEY;
+        const supabase = createClient(supabaseUrl, supabaseKey);
+
+        // Pull IFG users, pre-registrations, and all prospects in parallel
+        const [usersRes, preRegsRes, prospectsRes, analysesRes] = await Promise.all([
+            supabase.rpc('get_auth_users').catch(() => ({ data: null })),
+            supabase.from('pre_registrations').select('*'),
+            supabase.from('prospects').select('id, name, company, job_title, sector, linkedin_url'),
+            supabase.from('ai_analysis').select(`
+                lead_score, lead_status, has_tested_ifg,
+                conversations ( prospect_id, last_message_at, prospects (id, name, linkedin_url) )
+            `).order('lead_score', { ascending: false })
+        ]);
+
+        // Build list of IFG registered emails/names
+        const ifgUsers = [];
+        
+        // From pre_registrations (has email + name + payment info)
+        const preRegs = preRegsRes.data || [];
+        preRegs.forEach(pr => {
+            ifgUsers.push({
+                email: pr.email,
+                name: pr.name || pr.email.split('@')[0],
+                source: 'pre_registration',
+                price_type: pr.price_type,
+                status: pr.status,
+                paid: !!pr.paid_at || !!pr.stripe_subscription_id,
+                paid_at: pr.paid_at,
+                stripe_id: pr.stripe_subscription_id,
+                created_at: pr.created_at
+            });
+        });
+
+        // From usage_logs (users who actually used IFG)
+        const usageRes2 = await supabase.from('usage_logs').select('user_id, event_type, created_at').order('created_at', { ascending: false });
+        const activeUserIds = new Set((usageRes2.data || []).map(u => u.user_id));
+
+        // Cross-reference: find prospects who match IFG users by name
+        const prospects = prospectsRes.data || [];
+        const analyses = analysesRes.data || [];
+        
+        // Build analysis lookup by prospect_id
+        const analysisLookup = {};
+        analyses.forEach(a => {
+            const pid = a.conversations?.prospect_id || a.conversations?.prospects?.id;
+            if (pid) analysisLookup[pid] = a;
+        });
+
+        // Find converted prospects (has_tested_ifg = true in analysis)
+        const converted = [];
+        const subscribers = [];
+
+        // Method 1: From AI analysis — has_tested_ifg flag
+        analyses.forEach(a => {
+            if (a.has_tested_ifg) {
+                const p = a.conversations?.prospects;
+                if (p) {
+                    const matchedPreReg = preRegs.find(pr => {
+                        const prName = (pr.name || '').toLowerCase();
+                        const pName = (p.name || '').toLowerCase();
+                        return prName && pName && (prName.includes(pName) || pName.includes(prName));
+                    });
+                    const entry = {
+                        id: p.id,
+                        name: p.name,
+                        linkedin_url: p.linkedin_url,
+                        lead_score: a.lead_score,
+                        lead_status: a.lead_status,
+                        last_message_at: a.conversations?.last_message_at,
+                        registered: true,
+                        paid: matchedPreReg?.paid || false,
+                        paid_at: matchedPreReg?.paid_at,
+                        price_type: matchedPreReg?.price_type,
+                        source: matchedPreReg ? 'pre_registration' : 'ai_detected'
+                    };
+                    if (entry.paid) {
+                        subscribers.push(entry);
+                    } else {
+                        converted.push(entry);
+                    }
+                }
+            }
+        });
+
+        // Method 2: From pre_registrations — match by name with prospects
+        preRegs.forEach(pr => {
+            const prName = (pr.name || '').toLowerCase().trim();
+            if (!prName) return;
+            
+            // Check if already found
+            const alreadyFound = [...converted, ...subscribers].find(c => 
+                c.name && c.name.toLowerCase().includes(prName)
+            );
+            if (alreadyFound) return;
+
+            // Find matching prospect
+            const matchedProspect = prospects.find(p => {
+                const pName = (p.name || '').toLowerCase();
+                return pName.includes(prName) || prName.includes(pName);
+            });
+
+            if (matchedProspect) {
+                const analysis = analysisLookup[matchedProspect.id];
+                const entry = {
+                    id: matchedProspect.id,
+                    name: matchedProspect.name,
+                    company: matchedProspect.company,
+                    job_title: matchedProspect.job_title,
+                    linkedin_url: matchedProspect.linkedin_url,
+                    lead_score: analysis?.lead_score || 0,
+                    lead_status: analysis?.lead_status || 'unknown',
+                    registered: true,
+                    paid: !!pr.paid_at || !!pr.stripe_subscription_id,
+                    paid_at: pr.paid_at,
+                    price_type: pr.price_type,
+                    email: pr.email,
+                    source: 'pre_registration'
+                };
+                if (entry.paid) {
+                    subscribers.push(entry);
+                } else {
+                    converted.push(entry);
+                }
+            }
+        });
+
+        res.json({
+            success: true,
+            converted: converted.sort((a, b) => (b.lead_score || 0) - (a.lead_score || 0)),
+            subscribers: subscribers.sort((a, b) => (b.lead_score || 0) - (a.lead_score || 0)),
+            summary: {
+                total_converted: converted.length,
+                total_subscribers: subscribers.length,
+                total_ifg_users: preRegs.length,
+                total_prospects: prospects.length
+            }
+        });
+
+    } catch (error) {
+        console.error('❌ Converted API error:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 // Kimi Chatbot - connected to ALL Supabase data (LINKIFG pipeline + IFG product)
 app.post('/api/kimi-chat', async (req, res) => {
     try {
@@ -228,37 +376,54 @@ app.post('/api/kimi-chat', async (req, res) => {
         const kimiUrl = process.env.KIMI_BASE_URL || 'https://api.moonshot.ai/v1';
         const kimiModel = process.env.KIMI_MODEL || 'kimi-k2.5';
 
+        // LINKIFG pipeline DB
         const supabaseUrl = process.env.SUPABASE_URL || 'https://igyxcobujacampiqndpf.supabase.co';
         const supabaseKey = process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_KEY;
         const supabase = createClient(supabaseUrl, supabaseKey);
 
-        // === PULL ALL DATA IN PARALLEL ===
+        // IFG product DB (real users, conversations, usage)
+        const ifgUrl = process.env.IFG_SUPABASE_URL || 'https://cgfygltnpopoayfoplyv.supabase.co';
+        const ifgKey = process.env.IFG_SUPABASE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNnZnlnbHRucG9wb2F5Zm9wbHl2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkxODY5NjQsImV4cCI6MjA3NDc2Mjk2NH0.0QQi7wWLzoph-oHUrapzxkYspAP7VXfgedUxjV-A4Vo';
+        const ifgDb = createClient(ifgUrl, ifgKey);
+
+        // === PULL ALL DATA IN PARALLEL (both DBs) ===
         const [
-            analysesRes, contactListRes, prospectsRes, conversationsRes,
-            messagesCountRes, preRegsRes, usageRes, followUpsRes
+            analysesRes, prospectsRes, conversationsRes,
+            messagesCountRes, followUpsRes,
+            // IFG product data
+            ifgProfilesRes, ifgUsersRes, ifgConvsRes, ifgMsgsCountRes, ifgQuotasRes, ifgSubscriptionsRes
         ] = await Promise.all([
             supabase.from('ai_analysis').select(`
                 lead_score, lead_status, sentiment, interest_level, has_tested_ifg, reasoning, recommended_action, follow_up_timing, personalization_hints,
                 conversations ( id, last_message_at, last_message_by, engagement_level, status,
                     prospects (name, company, job_title, sector, location, linkedin_url) )
             `).neq('recommended_action', 'ignore').order('lead_score', { ascending: false }).limit(100),
-            buildContactTodayList(supabase),
             supabase.from('prospects').select('id, name, company, job_title, sector, persona_type, location').limit(200),
             supabase.from('conversations').select('id, engagement_level, status, last_message_at, last_message_by').order('last_message_at', { ascending: false }).limit(100),
             supabase.from('messages').select('id', { count: 'exact', head: true }),
-            supabase.from('pre_registrations').select('id, email, name, price_type, status, created_at'),
-            supabase.from('usage_logs').select('id, event_type, tokens_used, model_used, created_at').order('created_at', { ascending: false }).limit(20),
-            supabase.from('follow_up_messages').select('id, status, generated_message, created_at').order('created_at', { ascending: false }).limit(20)
+            supabase.from('follow_up_messages').select('id, status, generated_message, created_at').order('created_at', { ascending: false }).limit(20),
+            // IFG product queries
+            ifgDb.from('profiles').select('id, email, first_name, last_name, role, company, created_at, abuse_detected'),
+            ifgDb.from('users').select('id, email, full_name, tier, stripe_customer_id, stripe_subscription_id, subscription_status, questions_used, questions_limit, created_at'),
+            ifgDb.from('conversations').select('id, user_id, title, country, status, created_at').order('created_at', { ascending: false }).limit(50),
+            ifgDb.from('messages').select('id', { count: 'exact', head: true }),
+            ifgDb.from('user_quotas').select('user_id, requests_count, tokens_used, requests_simple, requests_complex, last_request_at').order('last_request_at', { ascending: false }).limit(20),
+            ifgDb.from('subscriptions').select('id, user_id, plan_type, status, current_period_start, current_period_end, cancel_at_period_end').catch(() => ({ data: [] }))
         ]);
 
         const analyses = analysesRes.data || [];
-        const contactList = contactListRes;
         const prospects = prospectsRes.data || [];
         const conversations = conversationsRes.data || [];
         const totalMessages = messagesCountRes.count || 0;
-        const preRegs = preRegsRes.data || [];
-        const usageLogs = usageRes.data || [];
         const followUps = followUpsRes.data || [];
+
+        // IFG product data
+        const ifgProfiles = ifgProfilesRes.data || [];
+        const ifgUsers = ifgUsersRes.data || [];
+        const ifgConvs = ifgConvsRes.data || [];
+        const ifgTotalMsgs = ifgMsgsCountRes.count || 0;
+        const ifgQuotas = ifgQuotasRes.data || [];
+        const ifgSubs = (ifgSubscriptionsRes?.data) || [];
 
         // === BUILD RICH CONTEXT ===
         const hotLeads = analyses.filter(a => a.lead_status === 'hot');
@@ -283,35 +448,44 @@ app.post('/api/kimi-chat', async (req, res) => {
         // Top leads detail
         const topLeadsDetail = hotLeads.slice(0, 15).map(a => {
             const p = a.conversations?.prospects;
-            return `  • ${p?.name || '?'} (${p?.job_title || '?'} @ ${p?.company || '?'}, ${p?.sector || '?'}) | Score: ${a.lead_score} | Intérêt: ${a.interest_level} | Timing: ${a.follow_up_timing} | Testé: ${a.has_tested_ifg ? 'OUI' : 'non'} | ${a.reasoning}`;
+            return `  • ${p?.name || '?'} (${p?.job_title || '?'} @ ${p?.company || '?'}) | Score: ${a.lead_score} | Timing: ${a.follow_up_timing} | Testé: ${a.has_tested_ifg ? 'OUI' : 'non'}`;
         }).join('\n');
 
         const warmDetail = warmLeads.slice(0, 10).map(a => {
             const p = a.conversations?.prospects;
-            return `  • ${p?.name || '?'} (${p?.job_title || '?'} @ ${p?.company || '?'}) | Score: ${a.lead_score} | ${a.reasoning}`;
+            return `  • ${p?.name || '?'} (${p?.job_title || '?'} @ ${p?.company || '?'}) | Score: ${a.lead_score}`;
         }).join('\n');
 
-        const todayList = (contactList.lists?.contact_today || []).slice(0, 25).map(l =>
-            `  • ${l.name} (${l.job_title} @ ${l.company}) | Prio: ${l.priority}/100 | Séq: ${l.sequence_key} step ${l.sequence_step}/${l.sequence_total} | Style: ${l.message_style} | Psycho: ${l.sequence_psychology} | ${l.reason}`
+        // IFG product stats
+        const ifgPremium = ifgUsers.filter(u => u.tier === 'premium' || u.subscription_status === 'active');
+        const ifgFree = ifgUsers.filter(u => u.tier === 'free' || !u.tier);
+        const ifgActiveQuotas = ifgQuotas.filter(q => q.requests_count > 0);
+        const totalIFGQuestions = ifgQuotas.reduce((s, q) => s + (q.requests_count || 0), 0);
+        const totalIFGTokens = ifgQuotas.reduce((s, q) => s + (q.tokens_used || 0), 0);
+
+        const ifgUsersList = ifgProfiles.slice(0, 20).map(p => 
+            `  • ${p.first_name || ''} ${p.last_name || ''} (${p.email}) | Rôle: ${p.role} | Entreprise: ${p.company || '-'} | Inscrit: ${new Date(p.created_at).toLocaleDateString('fr-FR')}`
         ).join('\n');
 
-        const preRegsList = preRegs.map(r => `  • ${r.name || r.email} | Plan: ${r.price_type} | Status: ${r.status} | ${r.created_at}`).join('\n');
+        const ifgSubsList = ifgSubs.filter(s => s.status === 'active').map(s =>
+            `  • User: ${s.user_id} | Plan: ${s.plan_type} | Status: ${s.status} | Fin: ${s.current_period_end}`
+        ).join('\n');
 
         const systemPrompt = `Tu es KIMI, l'assistant IA stratégique d'Aitor Garcia, fondateur d'IFG (copilote IA pour la recherche fiscale).
-Tu as accès en temps réel à TOUTES les données de son business.
+Tu as accès en temps réel à TOUTES les données de son business : pipeline LinkedIn ET produit IFG.
 
 ═══════════════════════════════════════
-📊 DASHBOARD PIPELINE LINKEDIN (temps réel)
+📊 PIPELINE LINKEDIN LINKIFG
 ═══════════════════════════════════════
-Total prospects: ${prospects.length}
-Total conversations: ${conversations.length}
-Total messages échangés: ${totalMessages}
-Messages IA générés: ${followUps.length} (${followUps.filter(f => f.status === 'approved').length} approuvés, ${followUps.filter(f => f.status === 'sent').length} envoyés)
+Total prospects LinkedIn: ${prospects.length}
+Total conversations LinkedIn: ${conversations.length}
+Total messages LinkedIn: ${totalMessages}
+Messages IA générés: ${followUps.length} (${followUps.filter(f => f.status === 'approved').length} approuvés)
 
-RÉPARTITION LEADS:
-- 🔥 Hot leads: ${hotLeads.length}
-- 🟡 Warm leads: ${warmLeads.length}
-- 🔵 Cold leads: ${coldLeads.length}
+LEADS:
+- 🔥 Hot: ${hotLeads.length}
+- 🌡️ Warm: ${warmLeads.length}
+- ❄️ Cold: ${coldLeads.length}
 - ✅ Ont testé IFG: ${testedIFG.length}
 - 📬 Besoin follow-up: ${needsFollowUp.length}
 
@@ -321,41 +495,45 @@ ${Object.entries(engagementMap).map(([k, v]) => `- ${k}: ${v}`).join('\n')}
 SECTEURS:
 ${Object.entries(sectorMap).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([k, v]) => `- ${k}: ${v}`).join('\n')}
 
-TOP PROFILS CIBLÉS:
+TOP PROFILS:
 ${topTitles.map(([k, v]) => `- ${k}: ${v}`).join('\n')}
 
-═══════════════════════════════════════
-🔥 TOP HOT LEADS (détail):
-${topLeadsDetail || 'Aucun hot lead pour le moment'}
+🔥 HOT LEADS:
+${topLeadsDetail || 'Aucun'}
 
-🟡 WARM LEADS:
-${warmDetail || 'Aucun warm lead'}
-
-═══════════════════════════════════════
-🎯 CONTACTER AUJOURD'HUI (${contactList.summary?.contact_today || 0}):
-${todayList || 'Aucun prospect à contacter aujourd\'hui'}
-
-📅 Bientôt (< 3j): ${contactList.summary?.contact_soon || 0}
-✅ Séquences terminées: ${contactList.summary?.sequence_complete || 0}
+🌡️ WARM LEADS:
+${warmDetail || 'Aucun'}
 
 ═══════════════════════════════════════
-💰 IFG BUSINESS DATA:
-Pré-inscriptions: ${preRegs.length}
-${preRegsList || 'Aucune pré-inscription'}
+� IFG PRODUIT (Supabase IFG - données réelles)
+═══════════════════════════════════════
+Utilisateurs inscrits (profiles): ${ifgProfiles.length}
+Utilisateurs (table users): ${ifgUsers.length}
+- Premium/Payants: ${ifgPremium.length}
+- Free: ${ifgFree.length}
+Conversations IFG (questions posées): ${ifgConvs.length}
+Messages IFG total: ${ifgTotalMsgs}
+Questions totales (quotas): ${totalIFGQuestions}
+Tokens consommés: ${totalIFGTokens.toLocaleString()}
+Utilisateurs actifs (ont posé des questions): ${ifgActiveQuotas.length}
+Abonnements actifs: ${ifgSubs.filter(s => s.status === 'active').length}
 
-Usage API IFG (derniers logs):
-${usageLogs.slice(0, 5).map(l => `- ${l.event_type}: ${l.tokens_used} tokens (${l.model_used}) @ ${l.created_at}`).join('\n') || 'Aucun log'}
+UTILISATEURS IFG:
+${ifgUsersList || 'Aucun utilisateur'}
+
+${ifgSubsList ? `ABONNEMENTS ACTIFS:\n${ifgSubsList}` : ''}
+
+DERNIÈRE ACTIVITÉ IFG:
+${ifgQuotas.slice(0, 5).map(q => `  • User ${q.user_id?.slice(0,8)}... | ${q.requests_count} requêtes (${q.requests_simple} simples, ${q.requests_complex} complexes) | ${q.tokens_used} tokens | Dernier: ${q.last_request_at ? new Date(q.last_request_at).toLocaleString('fr-FR') : '-'}`).join('\n') || 'Aucune activité'}
 
 ═══════════════════════════════════════
 INSTRUCTIONS:
-- Réponds TOUJOURS en français
-- Sois concis, stratégique et actionnable
-- Utilise les données pour donner des conseils personnalisés
-- Si on te demande un message, utilise la psychologie de vente (Challenger Sale, SPIN, Loss Aversion)
-- Tu peux analyser les patterns, suggérer des priorités, rédiger des messages
-- Tu connais les séquences YC: hot (12j/5 steps), warm (17j/5 steps), cold (21j/4 steps)
-- Heures optimales: 8h-10h et 14h-16h, Mardi-Jeudi
-- IFG = copilote IA recherche fiscale, cible = avocats fiscalistes, experts-comptables, directeurs fiscaux
+- Réponds TOUJOURS en français, concis et actionnable
+- Tu as accès aux DEUX bases: LINKIFG (pipeline LinkedIn) et IFG (produit, vrais users)
+- Quand on demande "combien de users", donne les chiffres IFG produit (profiles + users)
+- Utilise la psychologie de vente (Challenger Sale, SPIN, Loss Aversion) pour les messages
+- Séquences YC: hot (12j/5 steps), warm (17j/5 steps), cold (21j/4 steps)
+- IFG = copilote IA recherche fiscale, cible = avocats fiscalistes, experts-comptables
 - Offre: 5 questions gratuites pour tester`;
 
         const fetch = require('node-fetch');
@@ -396,7 +574,8 @@ INSTRUCTIONS:
                 prospects: prospects.length,
                 analyses: analyses.length,
                 messages: totalMessages,
-                contact_today: contactList.summary?.contact_today || 0
+                ifg_users: ifgProfiles.length,
+                ifg_conversations: ifgConvs.length
             }
         });
     } catch (error) {

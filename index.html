@@ -1,1815 +1,175 @@
 <!DOCTYPE html>
 <html lang="fr">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LINKIFG - Intelligence Sales</title>
+    <title>LINKIFG - Pipeline</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: #F3F4F6;
-            height: 100vh;
-            overflow: hidden;
-            display: flex;
-            color: #1F2937;
-        }
-
-        /* Sidebar */
-        .sidebar {
-            width: 260px;
-            background: #fff;
-            border-right: 1px solid #E5E7EB;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-        }
-
-        .sidebar-header {
-            padding: 24px;
-        }
-
-        .logo {
-            font-size: 20px;
-            font-weight: 700;
-            color: #111827;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .logo-dot {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            background: #3B82F6;
-        }
-
-        .nav {
-            padding: 0 12px;
-        }
-
-        .nav-item {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 10px 14px;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 500;
-            color: #6B7280;
-            text-decoration: none;
-            margin-bottom: 4px;
-            transition: all 0.15s;
-        }
-
-        .nav-item:hover {
-            background: #F9FAFB;
-        }
-
-        .nav-item.active {
-            background: #EFF6FF;
-            color: #3B82F6;
-        }
-
-        .nav-item svg {
-            width: 20px;
-            height: 20px;
-        }
-
-        .sidebar-footer {
-            padding: 16px;
-            border-top: 1px solid #E5E7EB;
-        }
-
-        .sync-btn {
-            width: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            background: #111827;
-            color: #fff;
-            border: none;
-            padding: 12px;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: background 0.15s;
-        }
-
-        .sync-btn:hover {
-            background: #1F2937;
-        }
-
-        .sync-btn:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-        }
-
-        .sync-btn svg {
-            width: 16px;
-            height: 16px;
-        }
-
-        /* Main */
-        .main {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            min-width: 0;
-            background: #fff;
-        }
-
-        /* Header */
-        .header {
-            height: 64px;
-            border-bottom: 1px solid #E5E7EB;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0 24px;
-            background: #fff;
-            flex-shrink: 0;
-        }
-
-        .stats-row {
-            display: flex;
-            gap: 40px;
-        }
-
-        .stat-block h4 {
-            font-size: 11px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            color: #9CA3AF;
-            font-weight: 600;
-            margin-bottom: 4px;
-        }
-
-        .stat-block p {
-            font-size: 20px;
-            font-weight: 700;
-            color: #111827;
-        }
-
-        .stat-block p.urgent {
-            color: #DC2626;
-        }
-
-        .stat-block p.success {
-            color: #059669;
-        }
-
-        .status-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 500;
-            background: #D1FAE5;
-            color: #065F46;
-        }
-
-        .status-badge .dot {
-            width: 6px;
-            height: 6px;
-            border-radius: 50%;
-            background: #10B981;
-        }
-
-        /* Content Area */
-        .content {
-            flex: 1;
-            display: flex;
-            overflow: hidden;
-        }
-
-        /* Conversation List */
-        .conv-list {
-            width: 380px;
-            border-right: 1px solid #E5E7EB;
-            display: flex;
-            flex-direction: column;
-            background: #F9FAFB;
-        }
-
-        .search-box {
-            padding: 16px;
-            border-bottom: 1px solid #E5E7EB;
-            background: #F9FAFB;
-            flex-shrink: 0;
-        }
-
-        .search-input {
-            width: 100%;
-            padding: 10px 12px 10px 36px;
-            border: 1px solid #D1D5DB;
-            border-radius: 8px;
-            font-size: 14px;
-            background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%239CA3AF'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z'/%3E%3C/svg%3E") 10px center no-repeat;
-            background-size: 16px;
-        }
-
-        .search-input:focus {
-            outline: none;
-            border-color: #3B82F6;
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-        }
-
-        .conv-scroll {
-            flex: 1;
-            overflow-y: auto;
-        }
-
-        .conv-item {
-            padding: 16px;
-            border-bottom: 1px solid #E5E7EB;
-            border-left: 4px solid transparent;
-            cursor: pointer;
-            transition: background 0.15s;
-        }
-
-        .conv-item:hover {
-            background: #F3F4F6;
-        }
-
-        .conv-item.active {
-            background: #EFF6FF;
-            border-left-color: #3B82F6;
-        }
-
-        .conv-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 4px;
-        }
-
-        .conv-name {
-            font-weight: 600;
-            font-size: 15px;
-            color: #111827;
-        }
-
-        .conv-time {
-            font-size: 12px;
-            color: #9CA3AF;
-            white-space: nowrap;
-        }
-
-        .conv-title {
-            font-size: 12px;
-            color: #6B7280;
-            margin-bottom: 8px;
-        }
-
-        .conv-preview {
-            font-size: 13px;
-            color: #4B5563;
-            line-height: 1.4;
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-            margin-bottom: 8px;
-        }
-
-        .conv-badges {
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-        }
-
-        .badge {
-            display: inline-block;
-            padding: 3px 10px;
-            border-radius: 12px;
-            font-size: 11px;
-            font-weight: 600;
-        }
-
-        .badge-urgent {
-            background: #FEE2E2;
-            color: #991B1B;
-        }
-
-        .badge-followup {
-            background: #FEF3C7;
-            color: #92400E;
-        }
-
-        .badge-cold {
-            background: #F3F4F6;
-            color: #6B7280;
-            border: 1px solid #E5E7EB;
-        }
-
-        .badge-warm {
-            background: #FEF3C7;
-            color: #92400E;
-        }
-
-        .badge-hot {
-            background: #FEE2E2;
-            color: #991B1B;
-        }
-
-        /* Message View */
-        .msg-view {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            background: #fff;
-        }
-
-        .msg-empty {
-            flex: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #9CA3AF;
-            text-align: center;
-        }
-
-        .msg-empty svg {
-            width: 64px;
-            height: 64px;
-            margin-bottom: 16px;
-            opacity: 0.3;
-        }
-
-        .msg-header {
-            height: 64px;
-            border-bottom: 1px solid #E5E7EB;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0 24px;
-            flex-shrink: 0;
-            min-height: 0;
-        }
-
-        .msg-header-left {
-            display: flex;
-            align-items: center;
-            gap: 16px;
-        }
-
-        .avatar {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background: #DBEAFE;
-            color: #3B82F6;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 700;
-            font-size: 16px;
-        }
-
-        .msg-header-info h2 {
-            font-size: 16px;
-            font-weight: 600;
-            color: #111827;
-        }
-
-        .msg-header-info a {
-            font-size: 12px;
-            color: #3B82F6;
-            text-decoration: none;
-        }
-
-        .msg-header-info a:hover {
-            text-decoration: underline;
-        }
-
-        .msg-actions {
-            display: flex;
-            gap: 8px;
-        }
-
-        .btn {
-            padding: 8px 16px;
-            border-radius: 6px;
-            font-size: 13px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.15s;
-            border: none;
-        }
-
-        .btn-outline {
-            background: #fff;
-            border: 1px solid #D1D5DB;
-            color: #374151;
-        }
-
-        .btn-outline:hover {
-            background: #F9FAFB;
-        }
-
-        .btn-primary {
-            background: #3B82F6;
-            color: #fff;
-        }
-
-        .btn-primary:hover {
-            background: #2563EB;
-        }
-
-        .msg-body {
-            flex: 1;
-            overflow-y: auto;
-            padding: 24px;
-            background: #F9FAFB;
-        }
-
-        .msg-bubble {
-            max-width: 70%;
-            padding: 14px 18px;
-            border-radius: 16px;
-            margin-bottom: 16px;
-            font-size: 14px;
-            line-height: 1.5;
-            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-        }
-
-        .msg-bubble.me {
-            background: #3B82F6;
-            color: #fff;
-            margin-left: auto;
-            border-bottom-right-radius: 4px;
-        }
-
-        .msg-bubble.them {
-            background: #fff;
-            color: #1F2937;
-            border: 1px solid #E5E7EB;
-            border-bottom-left-radius: 4px;
-        }
-
-        .msg-time {
-            font-size: 10px;
-            margin-top: 6px;
-            opacity: 0.7;
-        }
-
-        .msg-bubble.me .msg-time {
-            text-align: right;
-            color: rgba(255, 255, 255, 0.7);
-        }
-
-        .msg-bubble.them .msg-time {
-            color: #9CA3AF;
-        }
-
-        .msg-input-area {
-            padding: 16px 24px;
-            border-top: 1px solid #E5E7EB;
-            background: #fff;
-            flex-shrink: 0;
-        }
-
-        .msg-input-wrapper {
-            position: relative;
-        }
-
-        .msg-textarea {
-            width: 100%;
-            padding: 14px 50px 14px 16px;
-            border: 1px solid #D1D5DB;
-            border-radius: 12px;
-            font-size: 14px;
-            font-family: inherit;
-            resize: none;
-            line-height: 1.5;
-        }
-
-        .msg-textarea:focus {
-            outline: none;
-            border-color: #3B82F6;
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-        }
-
-        .ai-btn {
-            position: absolute;
-            right: 12px;
-            bottom: 12px;
-            background: none;
-            border: none;
-            color: #3B82F6;
-            cursor: pointer;
-            padding: 6px;
-            border-radius: 6px;
-            transition: background 0.15s;
-        }
-
-        .ai-btn:hover {
-            background: #EFF6FF;
-        }
-
-        .ai-btn svg {
-            width: 20px;
-            height: 20px;
-        }
-
-        /* Loading */
-        .loading {
-            text-align: center;
-            padding: 40px;
-            color: #9CA3AF;
-        }
-
-        .spinner {
-            width: 32px;
-            height: 32px;
-            border: 3px solid #E5E7EB;
-            border-top-color: #3B82F6;
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-            margin: 0 auto 12px;
-        }
-
-        @keyframes spin {
-            to {
-                transform: rotate(360deg);
-            }
-        }
-
-        /* Qualification Panel */
-        .qualify-panel {
-            background: #fff;
-            border: 1px solid #E5E7EB;
-            border-radius: 12px;
-            margin: 0 24px 16px;
-            padding: 16px 20px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-        }
-
-        .qualify-panel-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 12px;
-        }
-
-        .qualify-panel-header h3 {
-            font-size: 13px;
-            font-weight: 600;
-            color: #374151;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .qualify-close {
-            background: none;
-            border: none;
-            color: #9CA3AF;
-            cursor: pointer;
-            padding: 2px;
-            font-size: 18px;
-            line-height: 1;
-        }
-
-        .qualify-close:hover {
-            color: #374151;
-        }
-
-        .qualify-score {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
-            margin-bottom: 10px;
-        }
-
-        .qualify-score.hot {
-            background: #FEE2E2;
-            color: #991B1B;
-        }
-
-        .qualify-score.warm {
-            background: #FEF3C7;
-            color: #92400E;
-        }
-
-        .qualify-score.cold {
-            background: #F3F4F6;
-            color: #6B7280;
-        }
-
-        .qualify-action {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
-            margin-bottom: 10px;
-            margin-left: 6px;
-        }
-
-        .qualify-action.relance { background: #DBEAFE; color: #1E40AF; }
-        .qualify-action.répondre { background: #D1FAE5; color: #065F46; }
-        .qualify-action.attendre { background: #FEF3C7; color: #92400E; }
-        .qualify-action.archiver { background: #F3F4F6; color: #6B7280; }
-
-        .qualify-reason {
-            font-size: 13px;
-            color: #4B5563;
-            line-height: 1.5;
-            margin-bottom: 12px;
-        }
-
-        .qualify-suggestion {
-            background: #F0F9FF;
-            border: 1px solid #BAE6FD;
-            border-radius: 8px;
-            padding: 10px 14px;
-            font-size: 13px;
-            color: #0C4A6E;
-            line-height: 1.5;
-        }
-
-        .qualify-suggestion-label {
-            font-size: 11px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            color: #0369A1;
-            margin-bottom: 4px;
-        }
-
-        .qualify-use-btn {
-            margin-top: 8px;
-            background: #3B82F6;
-            color: #fff;
-            border: none;
-            padding: 6px 14px;
-            border-radius: 6px;
-            font-size: 12px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: background 0.15s;
-        }
-
-        .qualify-use-btn:hover {
-            background: #2563EB;
-        }
-
-        .qualify-loading {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            color: #6B7280;
-            font-size: 13px;
-        }
-
-        .qualify-loading .spinner {
-            width: 18px;
-            height: 18px;
-            border-width: 2px;
-            margin: 0;
-        }
-
-        @media (max-width: 768px) {
-            .qualify-panel {
-                margin: 0 12px 12px;
-                padding: 12px 14px;
-            }
-        }
-
-        /* ===== Leads View ===== */
-        .leads-view {
-            display: none;
-            flex: 1;
-            overflow-y: auto;
-            padding: 24px;
-            background: #F9FAFB;
-        }
-
-        .leads-view.active {
-            display: block;
-        }
-
-        .leads-section {
-            margin-bottom: 32px;
-        }
-
-        .leads-section-header {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 16px;
-        }
-
-        .leads-section-header h3 {
-            font-size: 16px;
-            font-weight: 700;
-            color: #111827;
-        }
-
-        .leads-count {
-            background: #EF4444;
-            color: #fff;
-            font-size: 12px;
-            font-weight: 700;
-            padding: 2px 8px;
-            border-radius: 10px;
-        }
-
-        .leads-count.today { background: #F59E0B; }
-        .leads-count.week { background: #6B7280; }
-
-        .lead-card {
-            background: #fff;
-            border: 1px solid #E5E7EB;
-            border-radius: 12px;
-            padding: 16px 20px;
-            margin-bottom: 12px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
-            transition: border-color 0.15s;
-        }
-
-        .lead-card:hover {
-            border-color: #3B82F6;
-        }
-
-        .lead-card.urgent {
-            border-left: 4px solid #EF4444;
-        }
-
-        .lead-card.today {
-            border-left: 4px solid #F59E0B;
-        }
-
-        .lead-card.week {
-            border-left: 4px solid #6B7280;
-        }
-
-        .lead-card-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 8px;
-        }
-
-        .lead-card-info h4 {
-            font-size: 15px;
-            font-weight: 600;
-            color: #111827;
-            margin-bottom: 2px;
-        }
-
-        .lead-card-info p {
-            font-size: 12px;
-            color: #6B7280;
-        }
-
-        .lead-score-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-            padding: 4px 10px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 700;
-        }
-
-        .lead-score-badge.hot { background: #FEE2E2; color: #991B1B; }
-        .lead-score-badge.warm { background: #FEF3C7; color: #92400E; }
-        .lead-score-badge.cold { background: #F3F4F6; color: #6B7280; }
-
-        .lead-card-reason {
-            font-size: 13px;
-            color: #374151;
-            margin-bottom: 10px;
-            line-height: 1.4;
-        }
-
-        .lead-card-meta {
-            display: flex;
-            gap: 16px;
-            flex-wrap: wrap;
-            margin-bottom: 12px;
-        }
-
-        .lead-meta-item {
-            font-size: 11px;
-            color: #6B7280;
-            display: flex;
-            align-items: center;
-            gap: 4px;
-        }
-
-        .lead-meta-item strong {
-            color: #374151;
-        }
-
-        .lead-timer {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 4px 10px;
-            border-radius: 6px;
-            font-size: 12px;
-            font-weight: 600;
-        }
-
-        .lead-timer.overdue {
-            background: #FEE2E2;
-            color: #991B1B;
-        }
-
-        .lead-timer.due-soon {
-            background: #FEF3C7;
-            color: #92400E;
-        }
-
-        .lead-timer.scheduled {
-            background: #DBEAFE;
-            color: #1E40AF;
-        }
-
-        .lead-card-message {
-            background: #F0F9FF;
-            border: 1px solid #BAE6FD;
-            border-radius: 8px;
-            padding: 12px 14px;
-            margin-top: 10px;
-        }
-
-        .lead-card-message label {
-            font-size: 11px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            color: #0369A1;
-            margin-bottom: 6px;
-            display: block;
-        }
-
-        .lead-card-message textarea {
-            width: 100%;
-            border: 1px solid #BAE6FD;
-            border-radius: 6px;
-            padding: 8px 10px;
-            font-size: 13px;
-            font-family: inherit;
-            resize: vertical;
-            min-height: 60px;
-            line-height: 1.5;
-            color: #0C4A6E;
-            background: #fff;
-        }
-
-        .lead-card-message textarea:focus {
-            outline: none;
-            border-color: #3B82F6;
-        }
-
-        .lead-card-actions {
-            display: flex;
-            gap: 8px;
-            margin-top: 10px;
-        }
-
-        .btn-approve {
-            background: #059669;
-            color: #fff;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 6px;
-            font-size: 12px;
-            font-weight: 600;
-            cursor: pointer;
-        }
-
-        .btn-approve:hover { background: #047857; }
-
-        .btn-reject {
-            background: #fff;
-            color: #DC2626;
-            border: 1px solid #FCA5A5;
-            padding: 8px 16px;
-            border-radius: 6px;
-            font-size: 12px;
-            font-weight: 600;
-            cursor: pointer;
-        }
-
-        .btn-reject:hover { background: #FEF2F2; }
-
-        .btn-linkedin {
-            background: #0A66C2;
-            color: #fff;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 6px;
-            font-size: 12px;
-            font-weight: 600;
-            cursor: pointer;
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-        }
-
-        .btn-linkedin:hover { background: #004182; }
-
-        .btn-generate {
-            background: #7C3AED;
-            color: #fff;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 6px;
-            font-size: 12px;
-            font-weight: 600;
-            cursor: pointer;
-        }
-
-        .btn-generate:hover { background: #6D28D9; }
-
-        .leads-empty {
-            text-align: center;
-            padding: 40px;
-            color: #9CA3AF;
-        }
-
-        .leads-empty svg {
-            width: 48px;
-            height: 48px;
-            margin-bottom: 12px;
-            opacity: 0.3;
-        }
-
-        /* Pipeline View (Kanban) */
-        .pipeline-view {
-            display: none;
-            flex: 1;
-            overflow-x: auto;
-            padding: 24px;
-            background: #F9FAFB;
-        }
-
-        .pipeline-view.active {
-            display: block;
-        }
-
-        .pipeline-board {
-            display: flex;
-            gap: 16px;
-            min-width: max-content;
-            padding-bottom: 16px;
-        }
-
-        .pipeline-col {
-            width: 280px;
-            min-width: 280px;
-            background: #fff;
-            border: 1px solid #E5E7EB;
-            border-radius: 12px;
-            display: flex;
-            flex-direction: column;
-            max-height: calc(100vh - 180px);
-        }
-
-        .pipeline-col-header {
-            padding: 14px 16px;
-            border-bottom: 1px solid #E5E7EB;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            flex-shrink: 0;
-        }
-
-        .pipeline-col-header h3 {
-            font-size: 13px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .pipeline-col-count {
-            background: #F3F4F6;
-            color: #374151;
-            font-size: 12px;
-            font-weight: 700;
-            padding: 2px 8px;
-            border-radius: 10px;
-        }
-
-        .pipeline-col.cold .pipeline-col-header { border-top: 3px solid #9CA3AF; border-radius: 12px 12px 0 0; }
-        .pipeline-col.warm .pipeline-col-header { border-top: 3px solid #F59E0B; border-radius: 12px 12px 0 0; }
-        .pipeline-col.hot .pipeline-col-header { border-top: 3px solid #EF4444; border-radius: 12px 12px 0 0; }
-        .pipeline-col.converted .pipeline-col-header { border-top: 3px solid #10B981; border-radius: 12px 12px 0 0; }
-        .pipeline-col.lost .pipeline-col-header { border-top: 3px solid #6B7280; border-radius: 12px 12px 0 0; }
-
-        .pipeline-col-body {
-            flex: 1;
-            overflow-y: auto;
-            padding: 12px;
-        }
-
-        .pipeline-card {
-            background: #F9FAFB;
-            border: 1px solid #E5E7EB;
-            border-radius: 8px;
-            padding: 12px;
-            margin-bottom: 8px;
-            cursor: pointer;
-            transition: all 0.15s;
-        }
-
-        .pipeline-card:hover {
-            border-color: #3B82F6;
-            box-shadow: 0 2px 8px rgba(59,130,246,0.1);
-        }
-
-        .pipeline-card-name {
-            font-size: 14px;
-            font-weight: 600;
-            color: #111827;
-            margin-bottom: 2px;
-        }
-
-        .pipeline-card-title {
-            font-size: 11px;
-            color: #6B7280;
-            margin-bottom: 6px;
-        }
-
-        .pipeline-card-preview {
-            font-size: 12px;
-            color: #4B5563;
-            line-height: 1.4;
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-            margin-bottom: 8px;
-        }
-
-        .pipeline-card-footer {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .pipeline-card-time {
-            font-size: 10px;
-            color: #9CA3AF;
-        }
-
-        .pipeline-card-score {
-            font-size: 11px;
-            font-weight: 700;
-            padding: 2px 8px;
-            border-radius: 10px;
-        }
-
-        .pipeline-card-score.high { background: #FEE2E2; color: #991B1B; }
-        .pipeline-card-score.medium { background: #FEF3C7; color: #92400E; }
-        .pipeline-card-score.low { background: #F3F4F6; color: #6B7280; }
-
-        .pipeline-card-actions {
-            display: flex;
-            gap: 4px;
-            margin-top: 8px;
-        }
-
-        .pipeline-card-actions button {
-            flex: 1;
-            padding: 6px;
-            border-radius: 4px;
-            font-size: 10px;
-            font-weight: 600;
-            cursor: pointer;
-            border: 1px solid #E5E7EB;
-            background: #fff;
-            color: #374151;
-            transition: all 0.15s;
-        }
-
-        .pipeline-card-actions button:hover {
-            background: #F3F4F6;
-        }
-
-        .pipeline-card-actions button.move-hot { color: #DC2626; border-color: #FCA5A5; }
-        .pipeline-card-actions button.move-hot:hover { background: #FEF2F2; }
-        .pipeline-card-actions button.move-converted { color: #059669; border-color: #6EE7B7; }
-        .pipeline-card-actions button.move-converted:hover { background: #ECFDF5; }
-        .pipeline-card-actions button.move-lost { color: #6B7280; border-color: #D1D5DB; }
-        .pipeline-card-actions button.move-lost:hover { background: #F9FAFB; }
-
-        /* Analysis Report Modal */
-        .modal-overlay {
-            display: none;
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.5);
-            z-index: 1000;
-            align-items: center;
-            justify-content: center;
-        }
-        .modal-overlay.active { display: flex; }
-
-        .modal {
-            background: #fff;
-            border-radius: 16px;
-            width: 90%;
-            max-width: 600px;
-            max-height: 80vh;
-            overflow-y: auto;
-            padding: 24px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-        }
-
-        .modal h2 { font-size: 18px; font-weight: 700; margin-bottom: 16px; }
-        .modal-close { float: right; background: none; border: none; font-size: 20px; cursor: pointer; color: #6B7280; }
-
-        .report-step {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 12px;
-            border-radius: 8px;
-            margin-bottom: 8px;
-            background: #F9FAFB;
-            border: 1px solid #E5E7EB;
-        }
-        .report-step.running { background: #FEF3C7; border-color: #FCD34D; }
-        .report-step.done { background: #ECFDF5; border-color: #6EE7B7; }
-        .report-step.error { background: #FEF2F2; border-color: #FCA5A5; }
-        .report-step-icon { font-size: 20px; }
-        .report-step-info { flex: 1; }
-        .report-step-info h4 { font-size: 13px; font-weight: 600; }
-        .report-step-info p { font-size: 11px; color: #6B7280; margin-top: 2px; }
-        .report-step-badge { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 8px; }
-
-        .report-summary {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 8px;
-            margin-top: 16px;
-        }
-        .report-stat {
-            text-align: center;
-            padding: 12px;
-            border-radius: 8px;
-            background: #F9FAFB;
-            border: 1px solid #E5E7EB;
-        }
-        .report-stat .val { font-size: 20px; font-weight: 700; }
-        .report-stat .lbl { font-size: 10px; color: #6B7280; margin-top: 2px; }
-
-        /* Kimi Chatbot */
-        .chatbot-container {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            z-index: 999;
-        }
-
-        .chatbot-toggle {
-            width: 56px;
-            height: 56px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, #3B82F6, #8B5CF6);
-            border: none;
-            color: #fff;
-            font-size: 24px;
-            cursor: pointer;
-            box-shadow: 0 4px 20px rgba(59,130,246,0.4);
-            transition: transform 0.2s;
-        }
-        .chatbot-toggle:hover { transform: scale(1.1); }
-
-        .chatbot-panel {
-            display: none;
-            position: absolute;
-            bottom: 70px;
-            right: 0;
-            width: 380px;
-            max-height: 500px;
-            background: #fff;
-            border-radius: 16px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-            overflow: hidden;
-            flex-direction: column;
-        }
-        .chatbot-panel.open { display: flex; }
-
-        .chatbot-header {
-            padding: 14px 16px;
-            background: linear-gradient(135deg, #3B82F6, #8B5CF6);
-            color: #fff;
-            font-weight: 700;
-            font-size: 14px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .chatbot-messages {
-            flex: 1;
-            overflow-y: auto;
-            padding: 16px;
-            max-height: 340px;
-            min-height: 200px;
-        }
-
-        .chat-msg {
-            margin-bottom: 12px;
-            max-width: 85%;
-        }
-        .chat-msg.user {
-            margin-left: auto;
-            background: #3B82F6;
-            color: #fff;
-            padding: 8px 12px;
-            border-radius: 12px 12px 2px 12px;
-            font-size: 13px;
-        }
-        .chat-msg.bot {
-            background: #F3F4F6;
-            color: #111827;
-            padding: 10px 14px;
-            border-radius: 12px 12px 12px 2px;
-            font-size: 13px;
-            line-height: 1.5;
-        }
-        .chat-msg.bot pre {
-            background: #E5E7EB;
-            padding: 8px;
-            border-radius: 6px;
-            font-size: 11px;
-            overflow-x: auto;
-            margin: 6px 0;
-        }
-        .chat-typing {
-            color: #9CA3AF;
-            font-size: 12px;
-            font-style: italic;
-        }
-
-        .chatbot-input {
-            display: flex;
-            border-top: 1px solid #E5E7EB;
-            padding: 8px;
-        }
-        .chatbot-input input {
-            flex: 1;
-            border: 1px solid #E5E7EB;
-            border-radius: 8px;
-            padding: 8px 12px;
-            font-size: 13px;
-            outline: none;
-        }
-        .chatbot-input input:focus { border-color: #3B82F6; }
-        .chatbot-input button {
-            margin-left: 6px;
-            background: #3B82F6;
-            color: #fff;
-            border: none;
-            border-radius: 8px;
-            padding: 8px 14px;
-            font-size: 13px;
-            font-weight: 600;
-            cursor: pointer;
-        }
-        .chatbot-input button:hover { background: #2563EB; }
-        .chatbot-input button:disabled { background: #9CA3AF; cursor: not-allowed; }
-
-        /* Nav badge */
-        .nav-badge {
-            background: #EF4444;
-            color: #fff;
-            font-size: 10px;
-            font-weight: 700;
-            padding: 1px 6px;
-            border-radius: 8px;
-            margin-left: auto;
-        }
-
-        /* Performance View */
-        .perf-view {
-            display: none;
-            flex: 1;
-            overflow-y: auto;
-            padding: 24px;
-            background: #F9FAFB;
-        }
-
-        .perf-view.active {
-            display: block;
-        }
-
-        .perf-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 16px;
-            margin-bottom: 32px;
-        }
-
-        .perf-card {
-            background: #fff;
-            border: 1px solid #E5E7EB;
-            border-radius: 12px;
-            padding: 20px;
-        }
-
-        .perf-card h4 {
-            font-size: 11px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            color: #9CA3AF;
-            margin-bottom: 8px;
-        }
-
-        .perf-card .value {
-            font-size: 28px;
-            font-weight: 700;
-            color: #111827;
-        }
-
-        .perf-card .sub {
-            font-size: 12px;
-            color: #6B7280;
-            margin-top: 4px;
-        }
-
-        /* ===== Mobile elements - hidden on desktop ===== */
-        .mobile-menu-btn {
-            display: none;
-            align-items: center;
-            justify-content: center;
-            background: none;
-            border: none;
-            padding: 6px;
-            border-radius: 6px;
-            cursor: pointer;
-            flex-shrink: 0;
-        }
-
-        .mobile-menu-btn:hover {
-            background: #F3F4F6;
-        }
-
-        .mobile-menu-btn svg {
-            width: 22px;
-            height: 22px;
-            color: #374151;
-        }
-
-        .sidebar-overlay {
-            display: none;
-            position: fixed;
-            inset: 0;
-            background: rgba(0,0,0,0.4);
-            z-index: 999;
-        }
-
-        .mobile-back-btn {
-            display: none;
-            align-items: center;
-            gap: 4px;
-            background: none;
-            border: none;
-            color: #3B82F6;
-            font-size: 14px;
-            font-weight: 500;
-            cursor: pointer;
-            padding: 4px 0;
-            flex-shrink: 0;
-        }
-
-        .mobile-back-btn svg {
-            width: 20px;
-            height: 20px;
-        }
-
-        /* ========== TABLET (<1024px) ========== */
-        @media (max-width: 1024px) {
-            .sidebar {
-                position: fixed;
-                left: -280px;
-                top: 0;
-                bottom: 0;
-                z-index: 1000;
-                width: 260px;
-                transition: left 0.3s ease;
-            }
-
-            .sidebar.open {
-                left: 0;
-            }
-
-            .sidebar-overlay.open {
-                display: block;
-            }
-
-            /* Hamburger visible inside header */
-            .mobile-menu-btn {
-                display: flex;
-            }
-
-            .header {
-                padding: 0 16px;
-                gap: 16px;
-                flex-shrink: 0;
-            }
-
-            .stats-row {
-                gap: 20px;
-            }
-
-            .stat-block h4 {
-                font-size: 10px;
-            }
-
-            .stat-block p {
-                font-size: 16px;
-            }
-
-            .conv-list {
-                width: 300px;
-            }
-        }
-
-        /* ========== MOBILE (<768px) ========== */
-        @media (max-width: 768px) {
-            body {
-                height: 100vh;
-                height: 100dvh;
-                overflow: hidden;
-                flex-direction: column;
-            }
-
-            .main {
-                flex: 1;
-                min-height: 0;
-                display: flex;
-                flex-direction: column;
-            }
-
-            .header {
-                height: auto;
-                min-height: 48px;
-                padding: 8px 12px;
-                flex-shrink: 0;
-                flex-wrap: nowrap;
-                gap: 10px;
-            }
-
-            .stats-row {
-                flex: 1;
-                gap: 12px;
-                min-width: 0;
-            }
-
-            .stat-block h4 {
-                font-size: 9px;
-                margin-bottom: 1px;
-            }
-
-            .stat-block p {
-                font-size: 13px;
-            }
-
-            .status-badge {
-                font-size: 10px;
-                padding: 3px 8px;
-                white-space: nowrap;
-            }
-
-            .content {
-                flex: 1;
-                min-height: 0;
-                flex-direction: column;
-                position: relative;
-                overflow: hidden;
-            }
-
-            .conv-list {
-                width: 100%;
-                border-right: none;
-                flex: 1;
-                min-height: 0;
-                display: flex;
-                flex-direction: column;
-            }
-
-            .conv-list.hidden-mobile {
-                display: none;
-            }
-
-            .search-box {
-                padding: 10px 12px;
-                flex-shrink: 0;
-            }
-
-            .conv-scroll {
-                flex: 1;
-                min-height: 0;
-                overflow-y: auto;
-                -webkit-overflow-scrolling: touch;
-            }
-
-            .conv-item {
-                padding: 12px;
-            }
-
-            .msg-view {
-                display: none;
-                position: absolute;
-                top: 0;
-                left: 0;
-                right: 0;
-                bottom: 0;
-                z-index: 10;
-                background: #fff;
-                flex-direction: column;
-            }
-
-            .msg-view.active-mobile {
-                display: flex;
-            }
-
-            .msg-view.active-mobile .mobile-back-btn {
-                display: flex;
-            }
-
-            .msg-header {
-                height: auto;
-                min-height: 48px;
-                padding: 8px 12px;
-                flex-shrink: 0;
-                flex-wrap: wrap;
-                gap: 6px;
-            }
-
-            .msg-header-left {
-                gap: 8px;
-                flex: 1;
-                min-width: 0;
-            }
-
-            .msg-header-info {
-                min-width: 0;
-            }
-
-            .msg-header-info h2 {
-                font-size: 14px;
-                white-space: nowrap;
-                overflow: hidden;
-                text-overflow: ellipsis;
-            }
-
-            .msg-actions {
-                gap: 6px;
-            }
-
-            .btn {
-                padding: 8px 14px;
-                font-size: 12px;
-                min-height: 36px;
-            }
-
-            .msg-body {
-                flex: 1;
-                min-height: 0;
-                padding: 12px;
-                overflow-y: auto;
-                -webkit-overflow-scrolling: touch;
-            }
-
-            .msg-bubble {
-                max-width: 85%;
-                padding: 10px 14px;
-                font-size: 14px;
-            }
-
-            .msg-input-area {
-                padding: 10px 12px;
-                flex-shrink: 0;
-            }
-
-            .msg-textarea {
-                padding: 10px 44px 10px 12px;
-                font-size: 16px;
-            }
-
-            #qualifyContainer {
-                flex-shrink: 0;
-                max-height: 40vh;
-                overflow-y: auto;
-            }
-        }
-
-        /* ========== SMALL MOBILE (<480px) ========== */
-        @media (max-width: 480px) {
-            .header {
-                padding: 6px 8px;
-                gap: 8px;
-            }
-
-            .stats-row {
-                gap: 8px;
-            }
-
-            .stat-block h4 {
-                font-size: 8px;
-            }
-
-            .stat-block p {
-                font-size: 12px;
-            }
-
-            .status-badge {
-                display: none;
-            }
-
-            .msg-header {
-                padding: 6px 10px;
-            }
-
-            .msg-actions {
-                width: 100%;
-                justify-content: flex-end;
-            }
-
-            .avatar {
-                width: 34px;
-                height: 34px;
-                font-size: 14px;
-            }
-
-            .msg-body {
-                padding: 8px;
-            }
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:'Inter',sans-serif; background:#F3F4F6; height:100vh; overflow:hidden; display:flex; color:#1F2937; }
+
+        /* Left: Pipeline */
+        .pipeline-panel {
+            flex:1; display:flex; flex-direction:column; overflow:hidden;
+        }
+        .pipeline-header {
+            padding:16px 24px; background:#fff; border-bottom:1px solid #E5E7EB;
+            display:flex; align-items:center; gap:16px; flex-wrap:wrap;
+        }
+        .pipeline-header h1 { font-size:18px; font-weight:700; }
+        .pipeline-header .stats { display:flex; gap:12px; margin-left:auto; flex-wrap:wrap; }
+        .stat-pill { padding:4px 12px; border-radius:20px; font-size:12px; font-weight:600; }
+        .pipeline-actions { display:flex; gap:8px; }
+        .btn { padding:8px 16px; border-radius:8px; font-size:13px; font-weight:600; border:none; cursor:pointer; }
+        .btn-primary { background:linear-gradient(135deg,#3B82F6,#8B5CF6); color:#fff; }
+        .btn-primary:hover { opacity:0.9; }
+        .btn-outline { background:#fff; border:1px solid #E5E7EB; color:#374151; }
+        .btn-outline:hover { background:#F9FAFB; }
+        .btn:disabled { opacity:0.5; cursor:not-allowed; }
+
+        /* Kanban board */
+        .kanban { display:flex; flex:1; overflow-x:auto; padding:16px; gap:12px; }
+        .kanban-col { min-width:240px; max-width:280px; flex:1; display:flex; flex-direction:column; background:#fff; border-radius:12px; border:1px solid #E5E7EB; overflow:hidden; }
+        .kanban-col-header { padding:12px 16px; font-size:13px; font-weight:700; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid #E5E7EB; }
+        .kanban-col-header .count { background:#E5E7EB; color:#374151; padding:2px 8px; border-radius:10px; font-size:11px; }
+        .kanban-col.cold .kanban-col-header { background:#F0F9FF; color:#0369A1; }
+        .kanban-col.warm .kanban-col-header { background:#FFFBEB; color:#92400E; }
+        .kanban-col.hot .kanban-col-header { background:#FEF2F2; color:#991B1B; }
+        .kanban-col.converted .kanban-col-header { background:#ECFDF5; color:#065F46; }
+        .kanban-col.subscriber .kanban-col-header { background:#F5F3FF; color:#5B21B6; }
+        .kanban-col.lost .kanban-col-header { background:#F9FAFB; color:#6B7280; }
+        .kanban-col-body { flex:1; overflow-y:auto; padding:8px; }
+
+        /* Pipeline card */
+        .p-card {
+            padding:10px 12px; border-radius:8px; margin-bottom:6px; cursor:pointer;
+            border:1px solid #E5E7EB; background:#fff; transition:all 0.15s;
+        }
+        .p-card:hover { border-color:#3B82F6; box-shadow:0 2px 8px rgba(59,130,246,0.15); }
+        .p-card.active { border-color:#3B82F6; background:#EFF6FF; }
+        .p-card-name { font-size:13px; font-weight:600; margin-bottom:2px; }
+        .p-card-title { font-size:11px; color:#6B7280; margin-bottom:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .p-card-footer { display:flex; justify-content:space-between; align-items:center; }
+        .p-card-time { font-size:10px; color:#9CA3AF; }
+        .p-card-score { font-size:10px; font-weight:700; padding:2px 6px; border-radius:6px; }
+        .p-card-score.high { background:#FEE2E2; color:#991B1B; }
+        .p-card-score.med { background:#FEF3C7; color:#92400E; }
+        .p-card-score.low { background:#F3F4F6; color:#6B7280; }
+        .p-card-reply { display:inline-block; font-size:9px; font-weight:700; padding:1px 5px; border-radius:4px; background:#DBEAFE; color:#1E40AF; margin-top:3px; }
+
+        /* Right: Detail panel */
+        .detail-panel {
+            width:0; background:#fff; border-left:1px solid #E5E7EB; display:flex; flex-direction:column;
+            transition:width 0.3s; overflow:hidden;
+        }
+        .detail-panel.open { width:480px; }
+        .detail-header {
+            padding:16px 20px; border-bottom:1px solid #E5E7EB; display:flex; align-items:center; gap:12px;
+        }
+        .detail-header .avatar { width:40px; height:40px; border-radius:50%; background:#3B82F6; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:16px; flex-shrink:0; }
+        .detail-header-info { flex:1; }
+        .detail-header-info h2 { font-size:15px; font-weight:700; }
+        .detail-header-info p { font-size:11px; color:#6B7280; }
+        .detail-close { background:none; border:none; font-size:20px; cursor:pointer; color:#6B7280; padding:4px; }
+        .detail-close:hover { color:#111; }
+
+        /* Detail tabs */
+        .detail-tabs { display:flex; border-bottom:1px solid #E5E7EB; }
+        .detail-tab { flex:1; padding:10px; text-align:center; font-size:12px; font-weight:600; cursor:pointer; color:#6B7280; border-bottom:2px solid transparent; }
+        .detail-tab.active { color:#3B82F6; border-bottom-color:#3B82F6; }
+
+        .detail-body { flex:1; overflow-y:auto; }
+
+        /* AI info section */
+        .ai-info { padding:16px 20px; }
+        .ai-row { display:flex; justify-content:space-between; padding:6px 0; font-size:12px; border-bottom:1px solid #F3F4F6; }
+        .ai-row .label { color:#6B7280; }
+        .ai-row .val { font-weight:600; }
+        .ai-badge { display:inline-block; padding:2px 8px; border-radius:6px; font-size:11px; font-weight:700; }
+        .ai-badge.hot { background:#FEE2E2; color:#991B1B; }
+        .ai-badge.warm { background:#FEF3C7; color:#92400E; }
+        .ai-badge.cold { background:#DBEAFE; color:#1E40AF; }
+
+        /* Messages */
+        .msg-list { padding:16px 20px; display:flex; flex-direction:column; gap:10px; }
+        .msg-bubble { max-width:85%; padding:10px 14px; border-radius:14px; font-size:13px; line-height:1.5; }
+        .msg-bubble.me { background:#3B82F6; color:#fff; margin-left:auto; border-bottom-right-radius:4px; }
+        .msg-bubble.them { background:#F3F4F6; color:#1F2937; border-bottom-left-radius:4px; }
+        .msg-sender { font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:2px; }
+        .msg-bubble.me .msg-sender { color:rgba(255,255,255,0.6); text-align:right; }
+        .msg-bubble.them .msg-sender { color:#9CA3AF; }
+        .msg-time { font-size:9px; margin-top:4px; opacity:0.6; }
+        .msg-bubble.me .msg-time { text-align:right; }
+
+        /* Kimi reply area */
+        .kimi-area { padding:12px 20px; border-top:2px solid #3B82F6; background:linear-gradient(135deg,#EFF6FF,#F5F3FF); }
+        .kimi-area h4 { font-size:11px; font-weight:700; color:#3B82F6; margin-bottom:6px; }
+        .kimi-area textarea { width:100%; border:1px solid #BFDBFE; border-radius:8px; padding:10px; font-size:13px; font-family:inherit; resize:vertical; min-height:80px; }
+        .kimi-area .kimi-actions { display:flex; gap:6px; margin-top:8px; }
+
+        /* Move buttons */
+        .move-btns { padding:12px 20px; border-top:1px solid #E5E7EB; display:flex; gap:6px; flex-wrap:wrap; }
+        .move-btn { padding:5px 10px; border-radius:6px; font-size:11px; font-weight:600; border:1px solid #E5E7EB; background:#fff; cursor:pointer; }
+        .move-btn:hover { background:#F3F4F6; }
+        .move-btn.hot { color:#DC2626; border-color:#FCA5A5; }
+        .move-btn.converted { color:#059669; border-color:#6EE7B7; }
+        .move-btn.lost { color:#6B7280; }
+
+        /* Analysis Modal */
+        .modal-overlay { display:none; position:fixed; top:0;left:0;right:0;bottom:0; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center; }
+        .modal-overlay.active { display:flex; }
+        .modal { background:#fff; border-radius:16px; width:90%; max-width:600px; max-height:80vh; overflow-y:auto; padding:24px; box-shadow:0 20px 60px rgba(0,0,0,0.3); }
+        .modal h2 { font-size:18px; font-weight:700; margin-bottom:16px; }
+        .modal-close { float:right; background:none; border:none; font-size:20px; cursor:pointer; color:#6B7280; }
+        .report-step { display:flex; align-items:center; gap:12px; padding:12px; border-radius:8px; margin-bottom:8px; background:#F9FAFB; border:1px solid #E5E7EB; }
+        .report-step.running { background:#FEF3C7; border-color:#FCD34D; }
+        .report-step.done { background:#ECFDF5; border-color:#6EE7B7; }
+        .report-step.error { background:#FEF2F2; border-color:#FCA5A5; }
+        .report-step-icon { font-size:20px; }
+        .report-step-info { flex:1; }
+        .report-step-info h4 { font-size:13px; font-weight:600; }
+        .report-step-info p { font-size:11px; color:#6B7280; margin-top:2px; }
+        .report-step-badge { font-size:11px; font-weight:700; padding:2px 8px; border-radius:8px; }
+        .report-summary { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:16px; }
+        .report-stat { text-align:center; padding:12px; border-radius:8px; background:#F9FAFB; border:1px solid #E5E7EB; }
+        .report-stat .val { font-size:20px; font-weight:700; }
+        .report-stat .lbl { font-size:10px; color:#6B7280; margin-top:2px; }
+
+        /* Chatbot */
+        .chatbot-container { position:fixed; bottom:20px; right:20px; z-index:999; }
+        .chatbot-toggle { width:56px; height:56px; border-radius:50%; background:linear-gradient(135deg,#3B82F6,#8B5CF6); border:none; color:#fff; font-size:24px; cursor:pointer; box-shadow:0 4px 20px rgba(59,130,246,0.4); transition:transform 0.2s; }
+        .chatbot-toggle:hover { transform:scale(1.1); }
+        .chatbot-panel { display:none; position:absolute; bottom:70px; right:0; width:380px; max-height:500px; background:#fff; border-radius:16px; box-shadow:0 10px 40px rgba(0,0,0,0.2); overflow:hidden; flex-direction:column; }
+        .chatbot-panel.open { display:flex; }
+        .chatbot-header { padding:14px 16px; background:linear-gradient(135deg,#3B82F6,#8B5CF6); color:#fff; font-weight:700; font-size:14px; display:flex; align-items:center; gap:8px; }
+        .chatbot-messages { flex:1; overflow-y:auto; padding:16px; max-height:340px; min-height:200px; }
+        .chat-msg { margin-bottom:12px; max-width:85%; }
+        .chat-msg.user { margin-left:auto; background:#3B82F6; color:#fff; padding:8px 12px; border-radius:12px 12px 2px 12px; font-size:13px; }
+        .chat-msg.bot { background:#F3F4F6; color:#111827; padding:10px 14px; border-radius:12px 12px 12px 2px; font-size:13px; line-height:1.5; }
+        .chat-typing { color:#9CA3AF; font-size:12px; font-style:italic; }
+        .chatbot-input { display:flex; border-top:1px solid #E5E7EB; padding:8px; }
+        .chatbot-input input { flex:1; border:1px solid #E5E7EB; border-radius:8px; padding:8px 12px; font-size:13px; outline:none; }
+        .chatbot-input input:focus { border-color:#3B82F6; }
+        .chatbot-input button { margin-left:6px; background:#3B82F6; color:#fff; border:none; border-radius:8px; padding:8px 14px; font-size:13px; font-weight:600; cursor:pointer; }
+        .chatbot-input button:disabled { background:#9CA3AF; }
+
+        .spinner { width:24px; height:24px; border:3px solid #E5E7EB; border-top-color:#3B82F6; border-radius:50%; animation:spin 0.6s linear infinite; }
+        @keyframes spin { to { transform:rotate(360deg); } }
+
+        .empty-col { text-align:center; padding:20px; color:#9CA3AF; font-size:12px; }
+
+        @media (max-width:768px) {
+            .detail-panel.open { position:fixed; top:0; left:0; right:0; bottom:0; width:100%; z-index:100; }
+            .kanban { flex-direction:column; }
+            .kanban-col { min-width:100%; max-width:100%; }
         }
     </style>
 </head>
-
 <body>
 
-    <!-- Sidebar overlay for mobile -->
-    <div class="sidebar-overlay" id="sidebarOverlay"></div>
-
-    <!-- Sidebar -->
-    <aside class="sidebar" id="sidebar">
-        <div>
-            <div class="sidebar-header">
-                <div class="logo"><span class="logo-dot"></span> LINKIFG</div>
-            </div>
-            <nav class="nav">
-                <a href="#" class="nav-item active" data-view="inbox">
-                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                    </svg>
-                    Inbox
-                </a>
-                <a href="#" class="nav-item" data-view="leads">
-                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                    Leads
-                    <span class="nav-badge" id="leadsNavBadge" style="display:none">0</span>
-                </a>
-                <a href="#" class="nav-item" data-view="pipeline">
-                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" />
-                    </svg>
-                    Pipeline
-                </a>
-                <a href="#" class="nav-item" data-view="perf">
-                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                    </svg>
-                    Performance
-                </a>
-            </nav>
-        </div>
-        <div class="sidebar-footer">
-            <button class="sync-btn" id="analyzeBtn" style="background:linear-gradient(135deg,#3B82F6,#8B5CF6);color:#fff;margin-bottom:8px;font-weight:700">
-                🤖 Lancer l'analyse Kimi
-            </button>
-            <button class="sync-btn" id="syncBtn">
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-                Sync LinkedIn
-            </button>
-        </div>
-    </aside>
-
-    <!-- Main -->
-    <main class="main">
-        <header class="header">
-            <button class="mobile-menu-btn" id="menuBtn" aria-label="Menu">
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
-            </button>
-            <div class="stats-row">
-                <div class="stat-block">
-                    <h4>Prospects</h4>
-                    <p id="statProspects">--</p>
-                </div>
-                <div class="stat-block">
-                    <h4>À Répondre</h4>
-                    <p class="urgent" id="statUrgent">--</p>
-                </div>
-                <div class="stat-block">
-                    <h4>Opportunités</h4>
-                    <p class="success" id="statOpportunities">--</p>
-                </div>
-            </div>
-            <div class="status-badge"><span class="dot"></span> Système Opérationnel</div>
-        </header>
-
-        <div class="content" id="inboxView">
-            <div class="conv-list">
-                <div class="search-box">
-                    <input type="text" id="searchInput" name="searchInput" class="search-input"
-                        placeholder="Rechercher un prospect...">
-                </div>
-                <div class="conv-scroll" id="convList">
-                    <div class="loading">
-                        <div class="spinner"></div>
-                        Chargement...
-                    </div>
-                </div>
-            </div>
-            <div class="msg-view" id="msgView">
-                <div class="msg-empty">
-                    <div>
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                        </svg>
-                        <p>Sélectionnez une conversation</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Leads View -->
-        <div class="leads-view" id="leadsView">
-            <div class="loading" id="leadsLoading">
-                <div class="spinner"></div>
-                Chargement des leads...
-            </div>
-            <div id="leadsContent"></div>
-        </div>
-
-        <!-- Pipeline View -->
-        <div class="pipeline-view" id="pipelineView">
-            <div class="loading" id="pipelineLoading">
-                <div class="spinner"></div>
-                Chargement du pipeline...
-            </div>
-            <div id="pipelineContent"></div>
-        </div>
-
-        <!-- Performance View -->
-        <div class="perf-view" id="perfView">
-            <div class="loading" id="perfLoading">
-                <div class="spinner"></div>
-                Chargement des statistiques...
-            </div>
-            <div id="perfContent"></div>
-        </div>
-    </main>
-
-    <!-- Analysis Report Modal -->
+    <!-- Analysis Modal -->
     <div class="modal-overlay" id="analysisModal">
         <div class="modal">
             <button class="modal-close" onclick="document.getElementById('analysisModal').classList.remove('active')">&times;</button>
@@ -1819,19 +179,15 @@
         </div>
     </div>
 
-    <!-- Kimi Chatbot -->
+    <!-- Chatbot -->
     <div class="chatbot-container">
         <div class="chatbot-panel" id="chatbotPanel">
-            <div class="chatbot-header">
-                🤖 Kimi — Assistant Pipeline IFG
-                <span style="margin-left:auto;font-size:11px;opacity:0.8">connecté à Supabase</span>
-            </div>
+            <div class="chatbot-header">🤖 Kimi — Assistant IFG <span style="margin-left:auto;font-size:11px;opacity:0.8">connecté</span></div>
             <div class="chatbot-messages" id="chatbotMessages"></div>
             <div style="padding:6px 12px;display:flex;gap:4px;flex-wrap:wrap;border-top:1px solid #E5E7EB">
-                <button class="chat-quick-btn" data-q="Qui dois-je contacter en priorité aujourd'hui ?" style="font-size:10px;padding:3px 8px;border-radius:12px;border:1px solid #E5E7EB;background:#F9FAFB;cursor:pointer;color:#374151">🎯 Priorités du jour</button>
-                <button class="chat-quick-btn" data-q="Donne-moi un résumé de mon pipeline" style="font-size:10px;padding:3px 8px;border-radius:12px;border:1px solid #E5E7EB;background:#F9FAFB;cursor:pointer;color:#374151">📊 Résumé pipeline</button>
-                <button class="chat-quick-btn" data-q="Rédige un message pour mon meilleur hot lead" style="font-size:10px;padding:3px 8px;border-radius:12px;border:1px solid #E5E7EB;background:#F9FAFB;cursor:pointer;color:#374151">✍️ Rédiger message</button>
-                <button class="chat-quick-btn" data-q="Quels sont les patterns qui marchent le mieux ?" style="font-size:10px;padding:3px 8px;border-radius:12px;border:1px solid #E5E7EB;background:#F9FAFB;cursor:pointer;color:#374151">📈 Patterns</button>
+                <button class="chat-quick-btn" data-q="Qui contacter en priorité aujourd'hui ?" style="font-size:10px;padding:3px 8px;border-radius:12px;border:1px solid #E5E7EB;background:#F9FAFB;cursor:pointer;color:#374151">🎯 Priorités</button>
+                <button class="chat-quick-btn" data-q="Résumé pipeline" style="font-size:10px;padding:3px 8px;border-radius:12px;border:1px solid #E5E7EB;background:#F9FAFB;cursor:pointer;color:#374151">📊 Pipeline</button>
+                <button class="chat-quick-btn" data-q="Rédige un message pour mon meilleur hot lead" style="font-size:10px;padding:3px 8px;border-radius:12px;border:1px solid #E5E7EB;background:#F9FAFB;cursor:pointer;color:#374151">✍️ Message</button>
             </div>
             <div class="chatbot-input">
                 <input type="text" id="chatbotInput" placeholder="Demande à Kimi..." />
@@ -1841,867 +197,307 @@
         <button class="chatbot-toggle" id="chatbotToggle">🤖</button>
     </div>
 
+    <!-- Main layout -->
+    <div class="pipeline-panel">
+        <div class="pipeline-header">
+            <h1>🔗 LINKIFG</h1>
+            <div class="stats" id="pipelineStats"></div>
+            <div class="pipeline-actions">
+                <button class="btn btn-primary" id="analyzeBtn">🤖 Analyse Kimi</button>
+                <button class="btn btn-outline" id="syncBtn">🔄 Sync</button>
+            </div>
+        </div>
+        <div class="kanban" id="kanban">
+            <div style="display:flex;align-items:center;justify-content:center;width:100%;padding:40px">
+                <div class="spinner"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Detail panel (slides in from right) -->
+    <div class="detail-panel" id="detailPanel">
+        <div class="detail-header" id="detailHeader"></div>
+        <div class="detail-tabs">
+            <div class="detail-tab active" data-tab="conv" onclick="switchTab('conv')">💬 Conversation</div>
+            <div class="detail-tab" data-tab="ai" onclick="switchTab('ai')">🤖 AI Data</div>
+        </div>
+        <div class="detail-body" id="detailBody"></div>
+        <div id="kimiArea"></div>
+        <div class="move-btns" id="moveBtns"></div>
+    </div>
+
     <script>
         const API_URL = 'https://linkedin-crm-dashboard-production.up.railway.app';
         const SUPABASE_URL = 'https://igyxcobujacampiqndpf.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlneXhjb2J1amFjYW1waXFuZHBmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk5NDYxMTUsImV4cCI6MjA4NTUyMjExNX0.8jgz6G0Irj6sRclcBKzYE5VzzXNrxzHgrAz45tHfHpc';
-
         const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-        let activeId = null;
 
-        function getPriority(conv, lastMsg) {
-            const now = Date.now();
-            const msgTime = lastMsg ? new Date(lastMsg.timestamp).getTime() : new Date(conv.created_at).getTime();
-            const days = (now - msgTime) / 86400000;
-            if (lastMsg && lastMsg.sender !== 'me') return 1000 + days;
-            if (lastMsg && lastMsg.sender === 'me' && days > 3) return 500 + days;
-            return msgTime / 1e10;
-        }
+        let allConvs = [];
+        let activeConvId = null;
+        let activeTab = 'conv';
 
-        function timeAgo(date) {
-            const s = Math.floor((Date.now() - new Date(date)) / 1000);
-            if (s < 60) return "à l'instant";
-            if (s < 3600) return Math.floor(s / 60) + " min";
-            if (s < 86400) return Math.floor(s / 3600) + " h";
-            if (s < 2592000) return Math.floor(s / 86400) + " j";
-            return Math.floor(s / 2592000) + " mois";
-        }
-
-        async function load() {
-            const { data, error } = await db.from('conversations').select(`
+        // ===== LOAD PIPELINE =====
+        async function loadPipeline() {
+            const { data: convs, error } = await db.from('conversations').select(`
                 id, last_message_at, last_message_by, status, engagement_level,
-                prospects (name, company, job_title, linkedin_url),
-                messages (content, sender, timestamp)
+                prospects (id, name, company, job_title, linkedin_url, sector),
+                messages (content, sender, timestamp),
+                ai_analysis (lead_score, lead_status, sentiment, interest_level, has_tested_ifg, reasoning, recommended_action, follow_up_timing, key_points, personalization_hints),
+                follow_up_messages (generated_message, status, created_at)
             `).order('last_message_at', { ascending: false });
 
             if (error) { console.error(error); return; }
+            allConvs = convs || [];
 
-            const sorted = data
-                .filter(c => c.engagement_level !== 'irrelevant')
-                .map(c => {
-                    const msgs = c.messages || [];
-                    const last = msgs.length ? msgs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))[0] : null;
-                    return { ...c, lastMsg: last, score: getPriority(c, last) };
-                }).sort((a, b) => b.score - a.score);
+            const stages = {
+                hot:        { label:'🔥 Hot',        cls:'hot',        items:[] },
+                warm:       { label:'🌡️ Warm',       cls:'warm',       items:[] },
+                cold:       { label:'❄️ Cold',       cls:'cold',       items:[] },
+                converted:  { label:'✅ Converti',   cls:'converted',  items:[] },
+                subscriber: { label:'💎 Abonné',     cls:'subscriber', items:[] },
+                lost:       { label:'💤 Perdu',      cls:'lost',       items:[] }
+            };
 
-            renderList(sorted);
-            updateStats(sorted);
+            allConvs.forEach(c => {
+                const a = Array.isArray(c.ai_analysis) ? c.ai_analysis[0] : c.ai_analysis;
+                const p = c.prospects;
+                if (!p) return;
+                if (c.engagement_level === 'irrelevant') return;
+                if (a?.recommended_action === 'ignore') return;
+
+                let stage = 'cold';
+                if (c.engagement_level === 'subscriber') stage = 'subscriber';
+                else if (c.engagement_level === 'converted' || a?.has_tested_ifg) stage = 'converted';
+                else if (c.status === 'archived' || c.engagement_level === 'lost') stage = 'lost';
+                else if (a?.lead_status === 'hot' || c.engagement_level === 'hot') stage = 'hot';
+                else if (a?.lead_status === 'warm' || c.engagement_level === 'warm') stage = 'warm';
+
+                const msgs = (c.messages || []).sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp));
+                const lastMsg = msgs[0];
+                const now = Date.now();
+                const lastTime = lastMsg ? new Date(lastMsg.timestamp).getTime() : new Date(c.last_message_at || 0).getTime();
+                const days = Math.round((now - lastTime) / 86400000);
+                const needsReply = c.last_message_by === 'them' || (lastMsg && lastMsg.sender !== 'me');
+
+                stages[stage].items.push({
+                    id: c.id, name: p.name, company: p.company, job_title: p.job_title,
+                    linkedin_url: p.linkedin_url, score: a?.lead_score || 0,
+                    days, needsReply, stage
+                });
+            });
+
+            // Sort each stage by score desc
+            Object.values(stages).forEach(s => s.items.sort((a,b) => b.score - a.score));
+
+            // Stats
+            const total = Object.values(stages).reduce((s,st) => s + st.items.length, 0);
+            document.getElementById('pipelineStats').innerHTML = 
+                `<span class="stat-pill" style="background:#FEE2E2;color:#991B1B">🔥 ${stages.hot.items.length}</span>` +
+                `<span class="stat-pill" style="background:#FEF3C7;color:#92400E">🌡️ ${stages.warm.items.length}</span>` +
+                `<span class="stat-pill" style="background:#DBEAFE;color:#1E40AF">❄️ ${stages.cold.items.length}</span>` +
+                `<span class="stat-pill" style="background:#ECFDF5;color:#065F46">✅ ${stages.converted.items.length}</span>` +
+                `<span class="stat-pill" style="background:#F5F3FF;color:#5B21B6">💎 ${stages.subscriber.items.length}</span>` +
+                `<span class="stat-pill" style="background:#F3F4F6;color:#6B7280">${total} total</span>`;
+
+            // Render kanban
+            let html = '';
+            Object.entries(stages).forEach(([key, stage]) => {
+                html += `<div class="kanban-col ${stage.cls}">
+                    <div class="kanban-col-header">${stage.label} <span class="count">${stage.items.length}</span></div>
+                    <div class="kanban-col-body">`;
+                if (!stage.items.length) {
+                    html += '<div class="empty-col">Aucun</div>';
+                }
+                stage.items.forEach(item => {
+                    const sc = item.score >= 70 ? 'high' : item.score >= 40 ? 'med' : 'low';
+                    const timeColor = item.days > 7 ? '#DC2626' : item.days > 3 ? '#F59E0B' : '#9CA3AF';
+                    html += `<div class="p-card${item.id === activeConvId ? ' active' : ''}" onclick="openDetail('${item.id}')">
+                        <div class="p-card-name">${item.name}</div>
+                        <div class="p-card-title">${item.job_title || ''}${item.company ? ' @ '+item.company : ''}</div>
+                        <div class="p-card-footer">
+                            <span class="p-card-time" style="color:${timeColor}">${item.days === 0 ? "Auj" : item.days+'j'}</span>
+                            <span class="p-card-score ${sc}">${item.score}/100</span>
+                        </div>
+                        ${item.needsReply ? '<span class="p-card-reply">⚡ À répondre</span>' : ''}
+                    </div>`;
+                });
+                html += '</div></div>';
+            });
+            document.getElementById('kanban').innerHTML = html;
         }
 
-        function renderList(convs) {
-            const el = document.getElementById('convList');
-            if (!convs.length) {
-                el.innerHTML = '<div class="loading">Aucune conversation</div>';
-                return;
-            }
-            el.innerHTML = convs.map(c => {
-                const name = c.prospects?.name || 'Inconnu';
-                const title = c.prospects?.job_title ? `${c.prospects.job_title} @ ${c.prospects.company || ''}` : '';
-                const preview = c.lastMsg?.content || 'Nouvelle connexion';
-                const time = c.lastMsg ? timeAgo(c.lastMsg.timestamp) : '';
+        // ===== OPEN DETAIL =====
+        async function openDetail(convId) {
+            activeConvId = convId;
+            const panel = document.getElementById('detailPanel');
+            panel.classList.add('open');
 
-                let badges = '';
-                if (c.lastMsg?.sender !== 'me') badges += '<span class="badge badge-urgent">À répondre</span>';
-                else if (c.lastMsg && (Date.now() - new Date(c.lastMsg.timestamp)) > 259200000) badges += '<span class="badge badge-followup">Relance</span>';
-                badges += `<span class="badge badge-${c.engagement_level || 'cold'}">${c.engagement_level || 'cold'}</span>`;
+            // Highlight active card
+            document.querySelectorAll('.p-card').forEach(c => c.classList.remove('active'));
+            document.querySelector(`.p-card[onclick="openDetail('${convId}')"]`)?.classList.add('active');
 
-                return `<div class="conv-item${c.id === activeId ? ' active' : ''}" onclick="select('${c.id}')">
-                    <div class="conv-header"><span class="conv-name">${name}</span><span class="conv-time">${time}</span></div>
-                    <div class="conv-title">${title}</div>
-                    <div class="conv-preview">${preview}</div>
-                    <div class="conv-badges">${badges}</div>
-                </div>`;
-            }).join('');
-        }
-
-        // Store current conversation data for AI calls
-        let currentConvData = null;
-
-        async function select(id) {
-            activeId = id;
-            showMobileMessages();
+            // Fetch full data
             const { data } = await db.from('conversations').select(`
-                id, prospects (name, linkedin_url), messages (content, sender, timestamp)
-            `).eq('id', id).single();
+                id, last_message_at, last_message_by, status, engagement_level,
+                prospects (id, name, company, job_title, linkedin_url, sector, location),
+                messages (content, sender, timestamp),
+                ai_analysis (lead_score, lead_status, sentiment, interest_level, has_tested_ifg, reasoning, recommended_action, follow_up_timing, key_points, personalization_hints),
+                follow_up_messages (generated_message, status, created_at)
+            `).eq('id', convId).single();
 
             if (!data) return;
 
-            const msgs = (data.messages || []).sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-            const name = data.prospects?.name || 'Inconnu';
-            const url = data.prospects?.linkedin_url || '#';
+            const p = data.prospects || {};
+            const a = Array.isArray(data.ai_analysis) ? data.ai_analysis[0] : data.ai_analysis;
+            const msgs = (data.messages || []).sort((x,y) => new Date(x.timestamp) - new Date(y.timestamp));
+            const followUp = Array.isArray(data.follow_up_messages) 
+                ? data.follow_up_messages.sort((x,y) => new Date(y.created_at) - new Date(x.created_at))[0]
+                : data.follow_up_messages;
 
-            currentConvData = { id, name, messages: msgs };
-
-            document.getElementById('msgView').innerHTML = `
-                <div class="msg-header">
-                    <div class="msg-header-left">
-                        <button class="mobile-back-btn" onclick="showMobileConvList()">
-                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
-                            Retour
-                        </button>
-                        <div class="avatar">${name.charAt(0)}</div>
-                        <div class="msg-header-info">
-                            <h2>${name}</h2>
-                            <a href="${url}" target="_blank">Voir sur LinkedIn ↗</a>
-                        </div>
-                    </div>
-                    <div class="msg-actions">
-                        <button class="btn btn-outline" onclick="qualifyLead()">Qualifier</button>
-                        <button class="btn btn-primary" onclick="archiveLead()">Archiver</button>
-                    </div>
+            // Header
+            document.getElementById('detailHeader').innerHTML = `
+                <div class="avatar">${(p.name||'?').charAt(0)}</div>
+                <div class="detail-header-info">
+                    <h2>${p.name || 'Inconnu'}</h2>
+                    <p>${p.job_title || ''}${p.company ? ' @ '+p.company : ''}${p.sector ? ' · '+p.sector : ''}</p>
+                    <a href="${p.linkedin_url || '#'}" target="_blank" style="font-size:11px;color:#3B82F6">Ouvrir LinkedIn ↗</a>
                 </div>
-                <div id="qualifyContainer"></div>
-                <div class="msg-body">${msgs.length ? msgs.map(m => `
+                <button class="detail-close" onclick="closeDetail()">&times;</button>`;
+
+            // Store for later
+            window._detail = { convId, name: p.name, msgs, analysis: a, followUp, prospect: p, engagement: data.engagement_level };
+
+            switchTab(activeTab);
+
+            // Move buttons
+            const stage = data.engagement_level || a?.lead_status || 'cold';
+            let movesHtml = '';
+            const allStages = ['cold','warm','hot','converted','subscriber','lost'];
+            allStages.forEach(s => {
+                if (s === stage) return;
+                const labels = { cold:'❄️ Cold', warm:'🌡️ Warm', hot:'🔥 Hot', converted:'✅ Converti', subscriber:'💎 Abonné', lost:'💤 Perdu' };
+                const cls = s === 'hot' ? 'hot' : s === 'converted' || s === 'subscriber' ? 'converted' : s === 'lost' ? 'lost' : '';
+                movesHtml += `<button class="move-btn ${cls}" onclick="moveTo('${convId}','${s}')">${labels[s]}</button>`;
+            });
+            document.getElementById('moveBtns').innerHTML = movesHtml;
+
+            // Kimi area
+            const kimiMsg = followUp?.generated_message || '';
+            document.getElementById('kimiArea').innerHTML = `
+                <div class="kimi-area">
+                    <h4>🤖 Réponse Kimi</h4>
+                    <textarea id="kimiTextarea">${kimiMsg}</textarea>
+                    <div class="kimi-actions">
+                        <button class="btn btn-primary" onclick="generateReply()" style="font-size:12px;padding:6px 12px">🤖 Générer</button>
+                        <button class="btn btn-outline" onclick="copyKimi()" style="font-size:12px;padding:6px 12px">📋 Copier</button>
+                        <a class="btn btn-outline" href="${p.linkedin_url || '#'}" target="_blank" style="font-size:12px;padding:6px 12px;text-decoration:none;display:inline-block">🔗 LinkedIn</a>
+                    </div>
+                </div>`;
+        }
+
+        function switchTab(tab) {
+            activeTab = tab;
+            document.querySelectorAll('.detail-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+            const d = window._detail;
+            if (!d) return;
+
+            const body = document.getElementById('detailBody');
+
+            if (tab === 'conv') {
+                // Messages
+                if (!d.msgs.length) {
+                    body.innerHTML = '<div class="empty-col">Aucun message</div>';
+                    return;
+                }
+                body.innerHTML = '<div class="msg-list">' + d.msgs.map(m => `
                     <div class="msg-bubble ${m.sender === 'me' ? 'me' : 'them'}">
+                        <div class="msg-sender">${m.sender === 'me' ? '📤 Moi' : '📩 ' + d.name}</div>
                         ${m.content}
-                        <div class="msg-time">${new Date(m.timestamp).toLocaleString()}</div>
+                        <div class="msg-time">${new Date(m.timestamp).toLocaleString('fr-FR')}</div>
                     </div>
-                `).join('') : '<div class="loading">Aucun message</div>'}</div>
-                <div class="msg-input-area">
-                    <div class="msg-input-wrapper">
-                        <textarea id="msgTextarea" name="msgTextarea" class="msg-textarea" rows="3" placeholder="Écrivez votre réponse..."></textarea>
-                        <button class="ai-btn" title="Qualifier avec IA" onclick="qualifyLead()">
-                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-                        </button>
-                    </div>
-                </div>
-            `;
-            load();
-        }
-
-        async function qualifyLead() {
-            if (!currentConvData || !currentConvData.messages.length) return;
-
-            const container = document.getElementById('qualifyContainer');
-            if (!container) return;
-
-            // Show loading
-            container.innerHTML = `
-                <div class="qualify-panel">
-                    <div class="qualify-loading">
-                        <div class="spinner"></div>
-                        Analyse IA en cours...
-                    </div>
-                </div>
-            `;
-
-            try {
-                const res = await fetch(`${API_URL}/api/qualify`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        prospect_name: currentConvData.name,
-                        messages: currentConvData.messages
-                    })
-                });
-
-                const result = await res.json();
-
-                if (!result.success) {
-                    container.innerHTML = `
-                        <div class="qualify-panel">
-                            <div class="qualify-reason" style="color:#DC2626">Erreur : ${result.error}</div>
-                        </div>
-                    `;
-                    return;
-                }
-
-                const q = result.qualification;
-
-                // Update engagement_level in Supabase
-                await db.from('conversations').update({ engagement_level: q.score }).eq('id', currentConvData.id);
-
-                // Render qualification panel
-                const suggestionHtml = q.suggested_message ? `
-                    <div class="qualify-suggestion">
-                        <div class="qualify-suggestion-label">Message suggere</div>
-                        ${q.suggested_message}
-                        <br>
-                        <button class="qualify-use-btn" onclick="useSuggestion(this)">Utiliser ce message</button>
-                    </div>
-                ` : '';
-
-                container.innerHTML = `
-                    <div class="qualify-panel">
-                        <div class="qualify-panel-header">
-                            <h3>
-                                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-                                Qualification Kimi AI
-                            </h3>
-                            <button class="qualify-close" onclick="this.closest('.qualify-panel').remove()">&times;</button>
-                        </div>
-                        <div>
-                            <span class="qualify-score ${q.score}">${q.score.toUpperCase()}</span>
-                            <span class="qualify-action ${q.action}">${q.action.toUpperCase()}</span>
-                        </div>
-                        <div class="qualify-reason">${q.reason}</div>
-                        ${suggestionHtml}
-                    </div>
-                `;
-
-                // Refresh list to show updated badge
-                load();
-
-            } catch (e) {
-                console.error('Qualify error:', e);
-                container.innerHTML = `
-                    <div class="qualify-panel">
-                        <div class="qualify-reason" style="color:#DC2626">Erreur de connexion au serveur</div>
-                    </div>
-                `;
-            }
-        }
-
-        function useSuggestion(btn) {
-            const suggestionEl = btn.closest('.qualify-suggestion');
-            // Get text content excluding the label and the button
-            const clone = suggestionEl.cloneNode(true);
-            clone.querySelector('.qualify-suggestion-label')?.remove();
-            clone.querySelector('.qualify-use-btn')?.remove();
-            const text = clone.textContent.trim();
-            const textarea = document.getElementById('msgTextarea');
-            if (textarea && text) {
-                textarea.value = text;
-                textarea.focus();
-            }
-        }
-
-        async function archiveLead() {
-            if (!activeId) return;
-            await db.from('conversations').update({ status: 'archived', engagement_level: 'cold' }).eq('id', activeId);
-            load();
-        }
-
-        function updateStats(convs) {
-            document.getElementById('statProspects').textContent = convs.length;
-            document.getElementById('statUrgent').textContent = convs.filter(c => c.lastMsg?.sender !== 'me').length;
-            document.getElementById('statOpportunities').textContent = convs.filter(c => ['hot', 'warm'].includes(c.engagement_level)).length;
-        }
-
-        document.getElementById('syncBtn').onclick = async function () {
-            this.disabled = true;
-            this.innerHTML = '<div class="spinner" style="width:16px;height:16px;border-width:2px;margin:0"></div> Sync...';
-            try {
-                const res = await fetch(`${API_URL}/scrape`, { method: 'POST' });
-                const data = await res.json();
-                if (data.success) {
-                    alert(`Synchronisation réussie ! ${data.saved} conversations sauvegardées`);
-                } else {
-                    alert('Erreur: ' + data.error);
-                }
-            } catch (e) { 
-                alert('Erreur de connexion au scraper'); 
-                console.error(e);
-            }
-            this.disabled = false;
-            this.innerHTML = '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:16px;height:16px"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg> Sync LinkedIn';
-            setTimeout(load, 3000);
-        };
-
-        // Mobile sidebar toggle
-        const menuBtn = document.getElementById('menuBtn');
-        const sidebar = document.getElementById('sidebar');
-        const sidebarOverlay = document.getElementById('sidebarOverlay');
-
-        function toggleSidebar() {
-            sidebar.classList.toggle('open');
-            sidebarOverlay.classList.toggle('open');
-        }
-
-        menuBtn.addEventListener('click', toggleSidebar);
-        sidebarOverlay.addEventListener('click', toggleSidebar);
-
-        // Close sidebar when nav item clicked on mobile
-        document.querySelectorAll('.nav-item').forEach(item => {
-            item.addEventListener('click', () => {
-                if (window.innerWidth <= 1024) {
-                    sidebar.classList.remove('open');
-                    sidebarOverlay.classList.remove('open');
-                }
-            });
-        });
-
-        // Mobile view switching
-        function isMobile() { return window.innerWidth <= 768; }
-
-        function showMobileMessages() {
-            if (!isMobile()) return;
-            const convList = document.querySelector('.conv-list');
-            const msgView = document.getElementById('msgView');
-            convList.classList.add('hidden-mobile');
-            msgView.classList.add('active-mobile');
-        }
-
-        function showMobileConvList() {
-            const convList = document.querySelector('.conv-list');
-            const msgView = document.getElementById('msgView');
-            convList.classList.remove('hidden-mobile');
-            msgView.classList.remove('active-mobile');
-        }
-
-        // Reset mobile classes on resize
-        window.addEventListener('resize', () => {
-            if (!isMobile()) {
-                document.querySelector('.conv-list').classList.remove('hidden-mobile');
-                document.getElementById('msgView').classList.remove('active-mobile');
-            }
-            if (window.innerWidth > 1024) {
-                sidebar.classList.remove('open');
-                sidebarOverlay.classList.remove('open');
-            }
-        });
-
-        // ===== NAVIGATION =====
-        let currentView = 'inbox';
-
-        document.querySelectorAll('.nav-item').forEach(item => {
-            item.addEventListener('click', (e) => {
-                e.preventDefault();
-                document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-                item.classList.add('active');
-                switchView(item.dataset.view);
-            });
-        });
-
-        function switchView(view) {
-            currentView = view;
-            document.getElementById('inboxView').style.display = view === 'inbox' ? 'flex' : 'none';
-            document.getElementById('leadsView').classList.toggle('active', view === 'leads');
-            document.getElementById('pipelineView').classList.toggle('active', view === 'pipeline');
-            document.getElementById('perfView').classList.toggle('active', view === 'perf');
-
-            if (view === 'leads') loadLeads();
-            if (view === 'pipeline') loadPipeline();
-            if (view === 'perf') loadPerformance();
-        }
-
-        // Update leads badge on load
-        async function updateLeadsBadge() {
-            try {
-                const res = await fetch(`${API_URL}/api/contact-today`);
-                const data = await res.json();
-                const badge = document.getElementById('leadsNavBadge');
-                if (data.success && data.summary.contact_today > 0) {
-                    badge.textContent = data.summary.contact_today;
-                    badge.style.display = 'inline';
-                } else {
-                    badge.style.display = 'none';
-                }
-            } catch (e) { /* silent */ }
-        }
-        updateLeadsBadge();
-        setInterval(updateLeadsBadge, 60000);
-
-        // ===== LEADS VIEW (Contact Today - YC Sequence) =====
-        async function loadLeads() {
-            const loading = document.getElementById('leadsLoading');
-            const content = document.getElementById('leadsContent');
-            loading.style.display = 'block';
-            content.innerHTML = '';
-
-            try {
-                const res = await fetch(`${API_URL}/api/contact-today`);
-                const data = await res.json();
-
-                loading.style.display = 'none';
-
-                if (!data.success || (data.summary.contact_today === 0 && data.summary.contact_soon === 0)) {
-                    content.innerHTML = `<div class="leads-empty">
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                        <p>Aucun lead à contacter pour le moment</p>
-                        <p style="font-size:12px;margin-top:8px">Lancez un sync pour analyser vos conversations</p>
-                    </div>`;
-                    return;
-                }
-
-                let html = '';
-
-                // Summary bar
-                html += `<div style="display:flex;gap:16px;margin-bottom:24px;flex-wrap:wrap">
-                    <div style="background:#FEE2E2;padding:12px 20px;border-radius:10px;flex:1;min-width:140px">
-                        <div style="font-size:24px;font-weight:700;color:#991B1B">${data.summary.contact_today}</div>
-                        <div style="font-size:12px;color:#991B1B;font-weight:600">🎯 Contacter aujourd'hui</div>
-                    </div>
-                    <div style="background:#FEF3C7;padding:12px 20px;border-radius:10px;flex:1;min-width:140px">
-                        <div style="font-size:24px;font-weight:700;color:#92400E">${data.summary.contact_soon}</div>
-                        <div style="font-size:12px;color:#92400E;font-weight:600">📅 Bientôt (< 3j)</div>
-                    </div>
-                    <div style="background:#DBEAFE;padding:12px 20px;border-radius:10px;flex:1;min-width:140px">
-                        <div style="font-size:24px;font-weight:700;color:#1E40AF">${data.summary.total_active}</div>
-                        <div style="font-size:12px;color:#1E40AF;font-weight:600">� Prospects actifs</div>
-                    </div>
-                    <div style="background:#F3F4F6;padding:12px 20px;border-radius:10px;flex:1;min-width:140px">
-                        <div style="font-size:24px;font-weight:700;color:#6B7280">${data.summary.sequence_complete}</div>
-                        <div style="font-size:12px;color:#6B7280;font-weight:600">✅ Séquences terminées</div>
+                `).join('') + '</div>';
+                // Scroll to bottom
+                body.scrollTop = body.scrollHeight;
+            } else {
+                // AI data
+                const a = d.analysis || {};
+                body.innerHTML = `<div class="ai-info">
+                    <div class="ai-row"><span class="label">Score</span><span class="val">${a.lead_score || 0}/100</span></div>
+                    <div class="ai-row"><span class="label">Status</span><span class="ai-badge ${a.lead_status || 'cold'}">${(a.lead_status || 'cold').toUpperCase()}</span></div>
+                    <div class="ai-row"><span class="label">Sentiment</span><span class="val">${a.sentiment || '-'}</span></div>
+                    <div class="ai-row"><span class="label">Intérêt</span><span class="val">${a.interest_level || '-'}</span></div>
+                    <div class="ai-row"><span class="label">A testé IFG</span><span class="val">${a.has_tested_ifg ? '✅ Oui' : '❌ Non'}</span></div>
+                    <div class="ai-row"><span class="label">Action</span><span class="val">${a.recommended_action || '-'}</span></div>
+                    <div class="ai-row"><span class="label">Timing relance</span><span class="val">${a.follow_up_timing || '-'}</span></div>
+                    ${a.key_points?.length ? `<div style="margin-top:12px"><strong style="font-size:12px">Points clés:</strong><div style="margin-top:6px">${a.key_points.map(p => `<span style="display:inline-block;background:#F3F4F6;padding:2px 8px;border-radius:4px;font-size:11px;margin:2px">${p}</span>`).join('')}</div></div>` : ''}
+                    ${a.reasoning ? `<div style="margin-top:12px;padding:10px;background:#F9FAFB;border-radius:8px;font-size:12px;color:#374151;line-height:1.5"><strong>Raisonnement:</strong><br>${a.reasoning}</div>` : ''}
+                    ${a.personalization_hints ? `<div style="margin-top:8px;font-size:12px;color:#6B7280"><strong>Personnalisation:</strong> ${a.personalization_hints}</div>` : ''}
+                    <div style="margin-top:16px">
+                        <strong style="font-size:12px">Prospect:</strong>
+                        <div class="ai-row"><span class="label">Entreprise</span><span class="val">${d.prospect.company || '-'}</span></div>
+                        <div class="ai-row"><span class="label">Poste</span><span class="val">${d.prospect.job_title || '-'}</span></div>
+                        <div class="ai-row"><span class="label">Secteur</span><span class="val">${d.prospect.sector || '-'}</span></div>
+                        <div class="ai-row"><span class="label">Localisation</span><span class="val">${d.prospect.location || '-'}</span></div>
                     </div>
                 </div>`;
-
-                // Contact today section
-                if (data.lists.contact_today.length) {
-                    html += renderLeadSection('🎯 Contacter AUJOURD\'HUI', data.lists.contact_today, 'urgent');
-                }
-
-                // Contact soon section
-                if (data.lists.contact_soon.length) {
-                    html += renderLeadSection('📅 Bientôt (dans les 3 prochains jours)', data.lists.contact_soon, 'today');
-                }
-
-                // Sequence complete section
-                if (data.lists.sequence_complete.length) {
-                    html += `<div class="leads-section">
-                        <div class="leads-section-header">
-                            <h3>✅ Séquences terminées</h3>
-                            <span class="leads-count week">${data.lists.sequence_complete.length}</span>
-                        </div>`;
-                    data.lists.sequence_complete.forEach(lead => {
-                        html += `<div class="lead-card week" style="opacity:0.7">
-                            <div class="lead-card-header">
-                                <div class="lead-card-info">
-                                    <h4>${lead.name}</h4>
-                                    <p>${lead.job_title || ''} ${lead.company ? '@ ' + lead.company : ''}</p>
-                                </div>
-                                <span class="lead-score-badge ${lead.lead_status}">${lead.lead_score}/100</span>
-                            </div>
-                            <div class="lead-card-reason">Séquence ${lead.sequence_key} terminée</div>
-                            <div class="lead-card-actions">
-                                <a class="btn-linkedin" href="${lead.linkedin_url}" target="_blank">🔗 Ouvrir LinkedIn</a>
-                            </div>
-                        </div>`;
-                    });
-                    html += `</div>`;
-                }
-
-                content.innerHTML = html;
-
-            } catch (e) {
-                loading.style.display = 'none';
-                content.innerHTML = `<div class="leads-empty">
-                    <p style="color:#DC2626">Erreur de connexion au serveur</p>
-                    <p style="font-size:12px;margin-top:8px">${e.message}</p>
-                    <button class="btn btn-primary" style="margin-top:12px" onclick="loadLeads()">Réessayer</button>
-                </div>`;
             }
         }
 
-        function renderLeadSection(title, leads, type) {
-            let html = `<div class="leads-section">
-                <div class="leads-section-header">
-                    <h3>${title}</h3>
-                    <span class="leads-count ${type}">${leads.length}</span>
-                </div>`;
-
-            leads.forEach(lead => {
-                const timerClass = lead.is_overdue ? 'overdue' : lead.days_until_next === 0 ? 'due-soon' : 'scheduled';
-                const timerText = lead.days_since_last === 0 ? "Auj" : `${lead.days_since_last}j`;
-                const seqLabel = `Step ${lead.sequence_step}/${lead.sequence_total}`;
-                const psychLabel = (lead.sequence_psychology || '').replace(/_/g, ' ');
-
-                html += `<div class="lead-card ${type}">
-                    <div class="lead-card-header">
-                        <div class="lead-card-info">
-                            <h4>${lead.name}</h4>
-                            <p>${lead.job_title || ''} ${lead.company ? '@ ' + lead.company : ''}</p>
-                        </div>
-                        <div style="display:flex;gap:6px;align-items:center">
-                            <span class="lead-score-badge ${lead.lead_status}">${lead.lead_score}/100</span>
-                            <span class="lead-timer ${timerClass}">⏱ ${timerText}</span>
-                        </div>
-                    </div>
-                    <div class="lead-card-reason">${lead.reason}</div>
-                    <div class="lead-card-meta">
-                        <span class="lead-meta-item">🎯 <strong>${seqLabel}</strong></span>
-                        <span class="lead-meta-item">🧠 <strong>${psychLabel}</strong></span>
-                        <span class="lead-meta-item">📝 <strong>${lead.message_style}</strong></span>
-                        <span class="lead-meta-item">💬 Dernier: <strong>${lead.last_message_by === 'them' ? 'EUX ⚡' : 'Moi'}</strong></span>
-                        <span class="lead-meta-item">📊 <strong>${(lead.lead_status || '').toUpperCase()}</strong></span>
-                        ${lead.has_tested_ifg ? '<span class="lead-meta-item">✅ <strong>A testé IFG</strong></span>' : ''}
-                        <span class="lead-meta-item">� Priorité: <strong>${lead.priority}/100</strong></span>
-                    </div>`;
-
-                // Sequence goal
-                html += `<div style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:6px;padding:8px 12px;margin-bottom:10px;font-size:12px">
-                    <strong>🎯 Objectif:</strong> ${lead.sequence_goal}<br>
-                    <strong>📋 Instruction Kimi:</strong> <em>${lead.kimi_instruction}</em>
-                </div>`;
-
-                // Key points
-                if (lead.key_points && lead.key_points.length) {
-                    html += `<div style="margin-bottom:10px">
-                        ${lead.key_points.map(p => `<span style="display:inline-block;background:#F3F4F6;padding:2px 8px;border-radius:4px;font-size:11px;color:#374151;margin:2px 4px 2px 0">${p}</span>`).join('')}
-                    </div>`;
-                }
-
-                // Actions
-                html += `<div class="lead-card-actions">
-                    <button class="btn-generate" onclick="generateMessage('${lead.conversation_id}')">🤖 Générer message IA</button>
-                    <a class="btn-linkedin" href="${lead.linkedin_url}" target="_blank">🔗 Ouvrir LinkedIn</a>
-                </div>`;
-
-                html += `</div>`;
-            });
-
-            html += `</div>`;
-            return html;
-        }
-
-        async function approveMessage(convId) {
-            const textarea = document.getElementById(`msg-${convId}`);
-            const editedMessage = textarea ? textarea.value : null;
-
-            try {
-                // Find the follow-up message ID for this conversation
-                const { data: followUps } = await db.from('follow_up_messages')
-                    .select('id')
-                    .eq('conversation_id', convId)
-                    .eq('status', 'pending')
-                    .limit(1);
-
-                if (followUps && followUps.length) {
-                    await fetch(`${API_URL}/api/follow-ups/${followUps[0].id}/approve`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ edited_message: editedMessage })
-                    });
-                }
-
-                // Copy to clipboard
-                if (editedMessage) {
-                    await navigator.clipboard.writeText(editedMessage);
-                    alert('✅ Message approuvé et copié dans le presse-papier !');
-                }
-
-                loadLeads();
-            } catch (e) {
-                alert('Erreur: ' + e.message);
-            }
-        }
-
-        async function rejectMessage(convId) {
-            try {
-                const { data: followUps } = await db.from('follow_up_messages')
-                    .select('id')
-                    .eq('conversation_id', convId)
-                    .eq('status', 'pending')
-                    .limit(1);
-
-                if (followUps && followUps.length) {
-                    await fetch(`${API_URL}/api/follow-ups/${followUps[0].id}/reject`, { method: 'POST' });
-                }
-                loadLeads();
-            } catch (e) {
-                alert('Erreur: ' + e.message);
-            }
-        }
-
-        async function generateMessage(convId) {
-            const btn = event.target;
-            btn.disabled = true;
-            btn.textContent = '⏳ Génération...';
-
-            try {
-                const res = await fetch(`${API_URL}/analyze`, { method: 'POST' });
-                const data = await res.json();
-                loadLeads();
-            } catch (e) {
-                alert('Erreur: ' + e.message);
-                btn.disabled = false;
-                btn.textContent = '🤖 Générer message IA';
-            }
-        }
-
-        // ===== PIPELINE VIEW (Kanban) =====
-        async function loadPipeline() {
-            const loading = document.getElementById('pipelineLoading');
-            const content = document.getElementById('pipelineContent');
-            loading.style.display = 'block';
-            content.innerHTML = '';
-
-            try {
-                // Get all conversations with AI analysis
-                const { data: convs, error } = await db.from('conversations').select(`
-                    id, last_message_at, last_message_by, status, engagement_level,
-                    prospects (id, name, company, job_title, linkedin_url, sector),
-                    messages (content, sender, timestamp),
-                    ai_analysis (lead_score, lead_status, sentiment, interest_level, follow_up_timing, key_points, reasoning)
-                `).order('last_message_at', { ascending: false });
-
-                loading.style.display = 'none';
-                if (error) throw error;
-
-                // Categorize into pipeline stages
-                const stages = {
-                    cold: { label: '❄️ Cold', items: [] },
-                    warm: { label: '🌡️ Warm', items: [] },
-                    hot: { label: '🔥 Hot', items: [] },
-                    converted: { label: '✅ Converti', items: [] },
-                    lost: { label: '💤 Perdu', items: [] }
-                };
-
-                convs.forEach(c => {
-                    const analysis = c.ai_analysis?.[0] || c.ai_analysis;
-                    const lastMsg = (c.messages || []).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))[0];
-                    const prospect = c.prospects;
-
-                    // Skip irrelevant conversations (filtered by Kimi)
-                    if (c.engagement_level === 'irrelevant') return;
-                    if (analysis?.recommended_action === 'ignore') return;
-
-                    // Determine stage
-                    let stage = 'cold';
-                    if (c.status === 'archived' || c.engagement_level === 'lost') stage = 'lost';
-                    else if (c.engagement_level === 'converted') stage = 'converted';
-                    else if (analysis?.lead_status === 'hot' || c.engagement_level === 'hot') stage = 'hot';
-                    else if (analysis?.lead_status === 'warm' || c.engagement_level === 'warm') stage = 'warm';
-                    else if (analysis?.lead_status === 'cold') stage = 'cold';
-
-                    const now = Date.now();
-                    const lastMsgTime = lastMsg ? new Date(lastMsg.timestamp).getTime() : new Date(c.last_message_at || c.created_at).getTime();
-                    const daysSince = Math.round((now - lastMsgTime) / 86400000);
-
-                    stages[stage].items.push({
-                        id: c.id,
-                        name: prospect?.name || 'Inconnu',
-                        company: prospect?.company || '',
-                        job_title: prospect?.job_title || '',
-                        linkedin_url: prospect?.linkedin_url || '#',
-                        sector: prospect?.sector || '',
-                        lastMsg: lastMsg?.content || '',
-                        lastMsgBy: lastMsg?.sender || c.last_message_by,
-                        daysSince,
-                        score: analysis?.lead_score || 0,
-                        interest: analysis?.interest_level || '',
-                        timing: analysis?.follow_up_timing || '',
-                        reasoning: analysis?.reasoning || '',
-                        keyPoints: analysis?.key_points || []
-                    });
-                });
-
-                // Render kanban board
-                let html = '<div class="pipeline-board">';
-
-                Object.entries(stages).forEach(([key, stage]) => {
-                    html += `<div class="pipeline-col ${key}">
-                        <div class="pipeline-col-header">
-                            <h3>${stage.label}</h3>
-                            <span class="pipeline-col-count">${stage.items.length}</span>
-                        </div>
-                        <div class="pipeline-col-body">`;
-
-                    if (stage.items.length === 0) {
-                        html += '<div style="text-align:center;padding:20px;color:#9CA3AF;font-size:12px">Aucun prospect</div>';
-                    }
-
-                    stage.items.forEach(item => {
-                        const scoreClass = item.score >= 70 ? 'high' : item.score >= 40 ? 'medium' : 'low';
-                        const timeColor = item.daysSince > 7 ? '#DC2626' : item.daysSince > 3 ? '#F59E0B' : '#6B7280';
-                        const needsReply = item.lastMsgBy === 'them' || item.lastMsgBy !== 'me';
-
-                        html += `<div class="pipeline-card" onclick="select('${item.id}')">
-                            <div class="pipeline-card-name">${item.name}</div>
-                            <div class="pipeline-card-title">${item.job_title}${item.company ? ' @ ' + item.company : ''}</div>`;
-
-                        if (item.lastMsg) {
-                            html += `<div class="pipeline-card-preview">${item.lastMsg}</div>`;
-                        }
-
-                        html += `<div class="pipeline-card-footer">
-                                <span class="pipeline-card-time" style="color:${timeColor}">
-                                    ${needsReply ? '⚡' : '📤'} ${item.daysSince === 0 ? "Aujourd'hui" : item.daysSince + 'j'}
-                                </span>
-                                <span class="pipeline-card-score ${scoreClass}">${item.score}/100</span>
-                            </div>`;
-
-                        // Action buttons based on current stage
-                        html += '<div class="pipeline-card-actions">';
-                        if (key === 'cold') {
-                            html += `<button onclick="event.stopPropagation();moveTo('${item.id}','warm')">→ Warm</button>`;
-                            html += `<button class="move-hot" onclick="event.stopPropagation();moveTo('${item.id}','hot')">→ Hot</button>`;
-                            html += `<button class="move-lost" onclick="event.stopPropagation();moveTo('${item.id}','lost')">Perdu</button>`;
-                        } else if (key === 'warm') {
-                            html += `<button onclick="event.stopPropagation();moveTo('${item.id}','cold')">← Cold</button>`;
-                            html += `<button class="move-hot" onclick="event.stopPropagation();moveTo('${item.id}','hot')">→ Hot</button>`;
-                            html += `<button class="move-lost" onclick="event.stopPropagation();moveTo('${item.id}','lost')">Perdu</button>`;
-                        } else if (key === 'hot') {
-                            html += `<button onclick="event.stopPropagation();moveTo('${item.id}','warm')">← Warm</button>`;
-                            html += `<button class="move-converted" onclick="event.stopPropagation();moveTo('${item.id}','converted')">✅ Converti</button>`;
-                            html += `<button class="move-lost" onclick="event.stopPropagation();moveTo('${item.id}','lost')">Perdu</button>`;
-                        } else if (key === 'converted') {
-                            html += `<button onclick="event.stopPropagation();moveTo('${item.id}','hot')">← Hot</button>`;
-                        } else if (key === 'lost') {
-                            html += `<button onclick="event.stopPropagation();moveTo('${item.id}','warm')">Réactiver</button>`;
-                        }
-                        html += '</div>';
-
-                        html += `</div>`;
-                    });
-
-                    html += `</div></div>`;
-                });
-
-                html += '</div>';
-
-                // Pipeline summary
-                const totalActive = stages.cold.items.length + stages.warm.items.length + stages.hot.items.length;
-                const convRate = convs.length > 0 ? (stages.converted.items.length / convs.length * 100).toFixed(1) : 0;
-                html = `<div style="display:flex;gap:16px;margin-bottom:20px;flex-wrap:wrap">
-                    <div style="background:#fff;border:1px solid #E5E7EB;padding:12px 20px;border-radius:10px;flex:1;min-width:120px">
-                        <div style="font-size:20px;font-weight:700">${convs.length}</div>
-                        <div style="font-size:11px;color:#6B7280">Total prospects</div>
-                    </div>
-                    <div style="background:#fff;border:1px solid #E5E7EB;padding:12px 20px;border-radius:10px;flex:1;min-width:120px">
-                        <div style="font-size:20px;font-weight:700;color:#EF4444">${stages.hot.items.length}</div>
-                        <div style="font-size:11px;color:#6B7280">Leads chauds</div>
-                    </div>
-                    <div style="background:#fff;border:1px solid #E5E7EB;padding:12px 20px;border-radius:10px;flex:1;min-width:120px">
-                        <div style="font-size:20px;font-weight:700;color:#059669">${stages.converted.items.length}</div>
-                        <div style="font-size:11px;color:#6B7280">Convertis</div>
-                    </div>
-                    <div style="background:#fff;border:1px solid #E5E7EB;padding:12px 20px;border-radius:10px;flex:1;min-width:120px">
-                        <div style="font-size:20px;font-weight:700;color:#7C3AED">${convRate}%</div>
-                        <div style="font-size:11px;color:#6B7280">Taux conversion</div>
-                    </div>
-                </div>` + html;
-
-                content.innerHTML = html;
-
-            } catch (e) {
-                loading.style.display = 'none';
-                content.innerHTML = `<div class="leads-empty">
-                    <p style="color:#DC2626">Erreur: ${e.message}</p>
-                    <button class="btn btn-primary" style="margin-top:12px" onclick="loadPipeline()">Réessayer</button>
-                </div>`;
-            }
+        function closeDetail() {
+            document.getElementById('detailPanel').classList.remove('open');
+            activeConvId = null;
+            document.querySelectorAll('.p-card').forEach(c => c.classList.remove('active'));
         }
 
         async function moveTo(convId, newStage) {
-            const statusMap = {
-                cold: { engagement_level: 'cold', status: 'active' },
-                warm: { engagement_level: 'warm', status: 'active' },
-                hot: { engagement_level: 'hot', status: 'active' },
-                converted: { engagement_level: 'converted', status: 'converted' },
-                lost: { engagement_level: 'lost', status: 'archived' }
+            const map = {
+                cold: { engagement_level:'cold', status:'active' },
+                warm: { engagement_level:'warm', status:'active' },
+                hot: { engagement_level:'hot', status:'active' },
+                converted: { engagement_level:'converted', status:'converted' },
+                subscriber: { engagement_level:'subscriber', status:'converted' },
+                lost: { engagement_level:'lost', status:'archived' }
             };
-
-            const update = statusMap[newStage];
-            if (!update) return;
-
-            await db.from('conversations').update(update).eq('id', convId);
+            await db.from('conversations').update(map[newStage]).eq('id', convId);
+            closeDetail();
             loadPipeline();
         }
 
-        // ===== PERFORMANCE VIEW =====
-        async function loadPerformance() {
-            const loading = document.getElementById('perfLoading');
-            const content = document.getElementById('perfContent');
-            loading.style.display = 'block';
-            content.innerHTML = '';
+        async function generateReply() {
+            const d = window._detail;
+            if (!d) return;
+            const textarea = document.getElementById('kimiTextarea');
+            textarea.value = '⏳ Kimi réfléchit...';
 
             try {
-                const res = await fetch(`${API_URL}/api/analytics?timeframe=30_days`);
+                const conversation = d.msgs.map(m => `${m.sender === 'me' ? 'Moi' : d.name}: ${m.content}`).join('\n');
+                const res = await fetch(`${API_URL}/api/generate-message`, {
+                    method:'POST', headers:{'Content-Type':'application/json'},
+                    body: JSON.stringify({ prospect_name: d.name, conversation })
+                });
                 const data = await res.json();
-
-                loading.style.display = 'none';
-
-                if (!data.success) {
-                    content.innerHTML = '<div class="leads-empty"><p>Pas encore de données</p></div>';
-                    return;
-                }
-
-                const a = data.analytics;
-                let html = '';
-
-                // KPI cards
-                html += `<h3 style="font-size:16px;font-weight:700;margin-bottom:16px">📊 Performance (30 jours)</h3>
-                <div class="perf-grid">
-                    <div class="perf-card">
-                        <h4>Messages envoyés</h4>
-                        <div class="value">${a.overall.total_sent}</div>
-                    </div>
-                    <div class="perf-card">
-                        <h4>Taux d'ouverture</h4>
-                        <div class="value">${a.overall.open_rate}%</div>
-                    </div>
-                    <div class="perf-card">
-                        <h4>Taux de réponse</h4>
-                        <div class="value" style="color:#059669">${a.overall.reply_rate}%</div>
-                    </div>
-                    <div class="perf-card">
-                        <h4>Taux de conversion</h4>
-                        <div class="value" style="color:#7C3AED">${a.overall.conversion_rate}%</div>
-                    </div>
-                </div>`;
-
-                // By lead status
-                html += `<h3 style="font-size:16px;font-weight:700;margin-bottom:16px">🎯 Par statut de lead</h3>
-                <div class="perf-grid">`;
-                ['hot', 'warm', 'cold'].forEach(status => {
-                    const d = a.by_lead_status[status];
-                    const rate = d.sent > 0 ? (d.replied / d.sent * 100).toFixed(1) : 0;
-                    const emoji = status === 'hot' ? '🔥' : status === 'warm' ? '🌡️' : '❄️';
-                    html += `<div class="perf-card">
-                        <h4>${emoji} ${status.toUpperCase()}</h4>
-                        <div class="value">${d.sent}</div>
-                        <div class="sub">${d.replied} réponses (${rate}%) · ${d.converted} conversions</div>
-                    </div>`;
-                });
-                html += `</div>`;
-
-                // Message length analysis
-                html += `<h3 style="font-size:16px;font-weight:700;margin-bottom:16px">📝 Longueur de message optimale</h3>
-                <div class="perf-grid">`;
-                const lengthLabels = { short: '📱 Court (<200 car)', medium: '📄 Moyen (200-400)', long: '📖 Long (>400)' };
-                Object.entries(a.message_length_analysis).forEach(([len, d]) => {
-                    html += `<div class="perf-card">
-                        <h4>${lengthLabels[len]}</h4>
-                        <div class="value">${d.reply_rate}%</div>
-                        <div class="sub">${d.count} messages</div>
-                    </div>`;
-                });
-                html += `</div>`;
-
-                // Optimal send times
-                const times = Object.entries(a.optimal_send_times || {}).sort((a, b) => {
-                    const rateA = a[1].sent > 0 ? a[1].replied / a[1].sent : 0;
-                    const rateB = b[1].sent > 0 ? b[1].replied / b[1].sent : 0;
-                    return rateB - rateA;
-                }).slice(0, 5);
-
-                if (times.length) {
-                    html += `<h3 style="font-size:16px;font-weight:700;margin-bottom:16px">⏰ Meilleures heures d'envoi</h3>
-                    <div class="perf-grid">`;
-                    times.forEach(([hour, d]) => {
-                        const rate = d.sent > 0 ? (d.replied / d.sent * 100).toFixed(1) : 0;
-                        html += `<div class="perf-card">
-                            <h4>${hour}h00</h4>
-                            <div class="value">${rate}%</div>
-                            <div class="sub">${d.sent} envoyés · ${d.replied} réponses</div>
-                        </div>`;
-                    });
-                    html += `</div>`;
-                }
-
-                content.innerHTML = html;
-
-            } catch (e) {
-                loading.style.display = 'none';
-                content.innerHTML = `<div class="leads-empty">
-                    <p style="color:#DC2626">Erreur: ${e.message}</p>
-                    <button class="btn btn-primary" style="margin-top:12px" onclick="loadPerformance()">Réessayer</button>
-                </div>`;
-            }
+                textarea.value = data.success ? data.message : '❌ ' + (data.error || 'Erreur');
+            } catch(e) { textarea.value = '❌ ' + e.message; }
         }
 
-        // Search filter
-        document.getElementById('searchInput').addEventListener('input', function() {
-            const q = this.value.toLowerCase();
-            document.querySelectorAll('.conv-item').forEach(item => {
-                const text = item.textContent.toLowerCase();
-                item.style.display = text.includes(q) ? '' : 'none';
-            });
-        });
+        async function copyKimi() {
+            const textarea = document.getElementById('kimiTextarea');
+            if (!textarea?.value) return;
+            await navigator.clipboard.writeText(textarea.value);
+            const btn = event.target;
+            btn.textContent = '✅ Copié !';
+            setTimeout(() => btn.textContent = '📋 Copier', 1500);
+        }
 
-        load();
-        db.channel('changes').on('postgres_changes', { event: '*', schema: 'public', table: 'conversations' }, load).subscribe();
+        // ===== SYNC =====
+        document.getElementById('syncBtn').addEventListener('click', async function() {
+            this.disabled = true; this.textContent = '⏳ Sync...';
+            try {
+                await fetch(`${API_URL}/scrape`, { method:'POST' });
+                loadPipeline();
+            } catch(e) { alert('Erreur: ' + e.message); }
+            finally { this.disabled = false; this.textContent = '🔄 Sync'; }
+        });
 
         // ===== ONE-CLICK ANALYSIS =====
         document.getElementById('analyzeBtn').addEventListener('click', async function() {
@@ -2709,180 +505,80 @@
             const modal = document.getElementById('analysisModal');
             const stepsEl = document.getElementById('analysisSteps');
             const reportEl = document.getElementById('analysisReport');
-            
-            btn.disabled = true;
-            btn.textContent = '⏳ Analyse en cours...';
-            modal.classList.add('active');
-            reportEl.innerHTML = '';
+            btn.disabled = true; btn.textContent = '⏳ Analyse...';
+            modal.classList.add('active'); reportEl.innerHTML = '';
 
             stepsEl.innerHTML = `
-                <div class="report-step running" id="step-scrape">
-                    <div class="report-step-icon">📬</div>
-                    <div class="report-step-info"><h4>Scraping LinkedIn</h4><p>Récupération des nouveaux messages...</p></div>
-                    <div class="report-step-badge" style="background:#FEF3C7;color:#92400E">En cours</div>
-                </div>
-                <div class="report-step" id="step-ai">
-                    <div class="report-step-icon">🤖</div>
-                    <div class="report-step-info"><h4>Analyse Kimi K2.5</h4><p>En attente...</p></div>
-                    <div class="report-step-badge" style="background:#F3F4F6;color:#6B7280">Attente</div>
-                </div>
-                <div class="report-step" id="step-list">
-                    <div class="report-step-icon">📋</div>
-                    <div class="report-step-info"><h4>Liste de contacts</h4><p>En attente...</p></div>
-                    <div class="report-step-badge" style="background:#F3F4F6;color:#6B7280">Attente</div>
-                </div>`;
+                <div class="report-step running" id="step-scrape"><div class="report-step-icon">📬</div><div class="report-step-info"><h4>Scraping</h4><p>Nouveaux messages...</p></div><div class="report-step-badge" style="background:#FEF3C7;color:#92400E">En cours</div></div>
+                <div class="report-step" id="step-ai"><div class="report-step-icon">🤖</div><div class="report-step-info"><h4>Analyse Kimi</h4><p>Attente...</p></div><div class="report-step-badge" style="background:#F3F4F6;color:#6B7280">Attente</div></div>
+                <div class="report-step" id="step-list"><div class="report-step-icon">📋</div><div class="report-step-info"><h4>Contact list</h4><p>Attente...</p></div><div class="report-step-badge" style="background:#F3F4F6;color:#6B7280">Attente</div></div>`;
 
             try {
-                const res = await fetch(`${API_URL}/api/full-analysis`, { method: 'POST' });
+                const res = await fetch(`${API_URL}/api/full-analysis`, { method:'POST' });
                 const data = await res.json();
+                if (!data.success) throw new Error(data.error);
 
-                if (!data.success) throw new Error(data.error || 'Erreur analyse');
-
-                // Update steps
                 data.steps.forEach(s => {
                     const el = document.getElementById(`step-${s.step === 'ai_analysis' ? 'ai' : s.step === 'contact_list' ? 'list' : s.step}`);
                     if (el) {
                         el.className = `report-step ${s.status === 'done' ? 'done' : 'error'}`;
-                        const badge = el.querySelector('.report-step-badge');
-                        badge.style.background = s.status === 'done' ? '#ECFDF5' : '#FEF2F2';
-                        badge.style.color = s.status === 'done' ? '#065F46' : '#991B1B';
-                        badge.textContent = s.status === 'done' ? `✅ ${(s.duration/1000).toFixed(1)}s` : '❌ Erreur';
-                        const info = el.querySelector('.report-step-info p');
-                        if (s.result) info.textContent = JSON.stringify(s.result).slice(0, 80);
+                        el.querySelector('.report-step-badge').textContent = s.status === 'done' ? `✅ ${(s.duration/1000).toFixed(1)}s` : '❌';
+                        el.querySelector('.report-step-badge').style.cssText = s.status === 'done' ? 'background:#ECFDF5;color:#065F46' : 'background:#FEF2F2;color:#991B1B';
                     }
                 });
 
-                // Show report
                 const r = data.report;
-                reportEl.innerHTML = `
-                    <h3 style="font-size:15px;font-weight:700;margin:16px 0 12px">📊 Rapport d'analyse</h3>
+                reportEl.innerHTML = `<h3 style="font-size:15px;font-weight:700;margin:16px 0 12px">📊 Rapport</h3>
                     <div class="report-summary">
-                        <div class="report-stat"><div class="val">${r.conversations_scraped}</div><div class="lbl">Conversations scrapées</div></div>
-                        <div class="report-stat"><div class="val">${r.new_messages_saved}</div><div class="lbl">Nouveaux messages</div></div>
-                        <div class="report-stat"><div class="val">${r.conversations_analyzed}</div><div class="lbl">Analysées par Kimi</div></div>
-                        <div class="report-stat" style="background:#FEE2E2"><div class="val" style="color:#991B1B">🔥 ${r.hot_leads}</div><div class="lbl">Hot leads</div></div>
-                        <div class="report-stat" style="background:#FEF3C7"><div class="val" style="color:#92400E">🟡 ${r.warm_leads}</div><div class="lbl">Warm leads</div></div>
-                        <div class="report-stat" style="background:#DBEAFE"><div class="val" style="color:#1E40AF">🔵 ${r.cold_leads}</div><div class="lbl">Cold leads</div></div>
-                        <div class="report-stat" style="background:#ECFDF5"><div class="val" style="color:#065F46">🎯 ${r.contact_today}</div><div class="lbl">À contacter aujourd'hui</div></div>
-                        <div class="report-stat"><div class="val">📅 ${r.contact_soon}</div><div class="lbl">Bientôt</div></div>
+                        <div class="report-stat"><div class="val">${r.conversations_analyzed}</div><div class="lbl">Analysées</div></div>
+                        <div class="report-stat" style="background:#FEE2E2"><div class="val" style="color:#991B1B">🔥 ${r.hot_leads}</div><div class="lbl">Hot</div></div>
+                        <div class="report-stat" style="background:#FEF3C7"><div class="val" style="color:#92400E">${r.warm_leads}</div><div class="lbl">Warm</div></div>
+                        <div class="report-stat" style="background:#ECFDF5"><div class="val" style="color:#065F46">🎯 ${r.contact_today}</div><div class="lbl">À contacter</div></div>
+                        <div class="report-stat"><div class="val">${r.new_messages_saved}</div><div class="lbl">Nouveaux msg</div></div>
                         <div class="report-stat"><div class="val">${r.errors}</div><div class="lbl">Erreurs</div></div>
-                    </div>
-                    <p style="text-align:center;margin-top:16px;font-size:12px;color:#6B7280">
-                        Durée totale: ${(data.total_duration_ms/1000).toFixed(1)}s | 
-                        <a href="#" onclick="document.getElementById('analysisModal').classList.remove('active');showView('leads');return false;" style="color:#3B82F6;font-weight:600">→ Voir les leads</a>
-                    </p>`;
-
-                // Refresh data
-                updateLeadsBadge();
-
-            } catch (e) {
-                stepsEl.innerHTML += `<div class="report-step error">
-                    <div class="report-step-icon">❌</div>
-                    <div class="report-step-info"><h4>Erreur</h4><p>${e.message}</p></div>
-                </div>`;
-            } finally {
-                btn.disabled = false;
-                btn.textContent = '🤖 Lancer l\'analyse Kimi';
-            }
+                    </div>`;
+                loadPipeline();
+            } catch(e) {
+                stepsEl.innerHTML += `<div class="report-step error"><div class="report-step-icon">❌</div><div class="report-step-info"><h4>Erreur</h4><p>${e.message}</p></div></div>`;
+            } finally { btn.disabled = false; btn.textContent = '🤖 Analyse Kimi'; }
         });
 
-        // ===== KIMI CHATBOT =====
+        // ===== CHATBOT =====
         const chatHistory = [];
-        const chatToggle = document.getElementById('chatbotToggle');
-        const chatPanel = document.getElementById('chatbotPanel');
-        const chatMessages = document.getElementById('chatbotMessages');
-        const chatInput = document.getElementById('chatbotInput');
-        const chatSend = document.getElementById('chatbotSend');
-
-        chatToggle.addEventListener('click', () => {
-            chatPanel.classList.toggle('open');
-            if (chatPanel.classList.contains('open') && chatMessages.children.length === 0) {
-                addBotMessage('Salut Aitor ! 👋 Je suis connecté à toutes tes données Supabase en temps réel. Pose-moi n\'importe quelle question sur ton pipeline, tes leads, ou demande-moi de rédiger un message.');
-            }
-            if (chatPanel.classList.contains('open')) chatInput.focus();
+        document.getElementById('chatbotToggle').addEventListener('click', () => {
+            const p = document.getElementById('chatbotPanel');
+            p.classList.toggle('open');
+            if (p.classList.contains('open') && document.getElementById('chatbotMessages').children.length === 0)
+                addBotMsg('Salut ! 👋 Pose-moi une question sur ton pipeline.');
+            if (p.classList.contains('open')) document.getElementById('chatbotInput').focus();
         });
+        document.getElementById('chatbotSend').addEventListener('click', sendChat);
+        document.getElementById('chatbotInput').addEventListener('keydown', e => { if (e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendChat();} });
+        document.querySelectorAll('.chat-quick-btn').forEach(b => b.addEventListener('click', () => { document.getElementById('chatbotInput').value=b.dataset.q; sendChat(); }));
 
-        chatSend.addEventListener('click', sendChat);
-        chatInput.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat(); } });
-
-        function addUserMessage(text) {
-            const div = document.createElement('div');
-            div.className = 'chat-msg user';
-            div.textContent = text;
-            chatMessages.appendChild(div);
-            chatMessages.scrollTop = chatMessages.scrollHeight;
-        }
-
-        function addBotMessage(text) {
-            const div = document.createElement('div');
-            div.className = 'chat-msg bot';
-            div.innerHTML = text.replace(/\n/g, '<br>').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/`(.*?)`/g, '<code style="background:#E5E7EB;padding:1px 4px;border-radius:3px;font-size:12px">$1</code>');
-            chatMessages.appendChild(div);
-            chatMessages.scrollTop = chatMessages.scrollHeight;
-            return div;
-        }
-
-        function addTyping() {
-            const div = document.createElement('div');
-            div.className = 'chat-msg bot chat-typing';
-            div.id = 'chatTyping';
-            div.textContent = 'Kimi réfléchit...';
-            chatMessages.appendChild(div);
-            chatMessages.scrollTop = chatMessages.scrollHeight;
-            return div;
-        }
+        function addBotMsg(t) { const d=document.createElement('div'); d.className='chat-msg bot'; d.innerHTML=t.replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>'); document.getElementById('chatbotMessages').appendChild(d); document.getElementById('chatbotMessages').scrollTop=9999; }
+        function addUserMsg(t) { const d=document.createElement('div'); d.className='chat-msg user'; d.textContent=t; document.getElementById('chatbotMessages').appendChild(d); document.getElementById('chatbotMessages').scrollTop=9999; }
 
         async function sendChat() {
-            const q = chatInput.value.trim();
+            const q = document.getElementById('chatbotInput').value.trim();
             if (!q) return;
-
-            chatInput.value = '';
-            addUserMessage(q);
-            chatHistory.push({ role: 'user', content: q });
-
-            chatSend.disabled = true;
-            const typing = addTyping();
-
+            document.getElementById('chatbotInput').value = '';
+            addUserMsg(q); chatHistory.push({role:'user',content:q});
+            document.getElementById('chatbotSend').disabled = true;
+            const typing = document.createElement('div'); typing.className='chat-msg bot chat-typing'; typing.textContent='Kimi réfléchit...';
+            document.getElementById('chatbotMessages').appendChild(typing);
             try {
-                const res = await fetch(`${API_URL}/api/kimi-chat`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ question: q, history: chatHistory.slice(-6) })
-                });
-                const data = await res.json();
-                typing.remove();
-
-                if (data.success) {
-                    addBotMessage(data.answer);
-                    chatHistory.push({ role: 'assistant', content: data.answer });
-                    // Show context badge
-                    const ctx = data.context_size;
-                    if (ctx) {
-                        const badge = document.createElement('div');
-                        badge.style.cssText = 'font-size:10px;color:#9CA3AF;text-align:right;margin-top:-8px;margin-bottom:8px';
-                        badge.textContent = `📊 ${ctx.prospects} prospects · ${ctx.analyses} analyses · ${ctx.contact_today} à contacter`;
-                        chatMessages.appendChild(badge);
-                    }
-                } else {
-                    addBotMessage('❌ Erreur: ' + (data.error || 'Impossible de contacter Kimi'));
-                }
-            } catch (e) {
-                typing.remove();
-                addBotMessage('❌ Erreur de connexion: ' + e.message);
-            } finally {
-                chatSend.disabled = false;
-                chatInput.focus();
-            }
+                const res = await fetch(`${API_URL}/api/kimi-chat`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({question:q,history:chatHistory.slice(-6)}) });
+                const data = await res.json(); typing.remove();
+                if (data.success) { addBotMsg(data.answer); chatHistory.push({role:'assistant',content:data.answer}); }
+                else addBotMsg('❌ ' + (data.error||'Erreur'));
+            } catch(e) { typing.remove(); addBotMsg('❌ '+e.message); }
+            finally { document.getElementById('chatbotSend').disabled = false; document.getElementById('chatbotInput').focus(); }
         }
 
-        // Quick questions
-        document.querySelectorAll('.chat-quick-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                chatInput.value = btn.dataset.q;
-                sendChat();
-            });
-        });
+        // Init
+        loadPipeline();
+        db.channel('changes').on('postgres_changes', { event:'*', schema:'public', table:'conversations' }, loadPipeline).subscribe();
     </script>
 </body>
-
 </html>
