@@ -39,6 +39,20 @@ app.use((req, res, next) => {
 // Serve static files (dashboard)
 app.use(express.static(path.join(__dirname)));
 
+// Debug: check env vars (masked)
+app.get('/debug-env', (req, res) => {
+    const mask = (v) => v ? v.slice(0, 6) + '...' + v.slice(-4) : 'NOT SET';
+    res.json({
+        KIMI_API_KEY: mask(process.env.KIMI_API_KEY),
+        KIMI_BASE_URL: process.env.KIMI_BASE_URL || 'NOT SET (default: https://api.moonshot.cn/v1)',
+        KIMI_MODEL: process.env.KIMI_MODEL || 'NOT SET (default: moonshot-v1-32k)',
+        SUPABASE_URL: mask(process.env.SUPABASE_URL),
+        SUPABASE_ANON_KEY: mask(process.env.SUPABASE_ANON_KEY),
+        SUPABASE_KEY: mask(process.env.SUPABASE_KEY),
+        NODE_ENV: process.env.NODE_ENV || 'NOT SET'
+    });
+});
+
 // Health check - moved to /api/status so index.html is served at /
 app.get('/api/status', (req, res) => {
     res.json({ status: 'ok', service: 'LinkedIn Scraper', lastRun: global.lastRun || 'never' });
