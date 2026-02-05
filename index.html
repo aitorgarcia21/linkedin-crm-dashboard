@@ -1108,6 +1108,7 @@
     </main>
 
     <script>
+        const API_URL = 'https://linkedin-crm-dashboard-production.up.railway.app';
         const SUPABASE_URL = 'https://igyxcobujacampiqndpf.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlneXhjb2J1amFjYW1waXFuZHBmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk5NDYxMTUsImV4cCI6MjA4NTUyMjExNX0.8jgz6G0Irj6sRclcBKzYE5VzzXNrxzHgrAz45tHfHpc';
 
@@ -1249,7 +1250,7 @@
             `;
 
             try {
-                const res = await fetch('/api/qualify', {
+                const res = await fetch(`${API_URL}/api/qualify`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -1345,8 +1346,7 @@
             this.disabled = true;
             this.innerHTML = '<div class="spinner" style="width:16px;height:16px;border-width:2px;margin:0"></div> Sync...';
             try {
-                const SCRAPER_URL = 'https://linkedin-crm-dashboard-production.up.railway.app';
-                const res = await fetch(`${SCRAPER_URL}/scrape`, { method: 'POST' });
+                const res = await fetch(`${API_URL}/scrape`, { method: 'POST' });
                 const data = await res.json();
                 if (data.success) {
                     alert(`Synchronisation réussie ! ${data.saved} conversations sauvegardées`);
