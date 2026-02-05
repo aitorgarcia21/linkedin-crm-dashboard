@@ -23,10 +23,7 @@ async function scrapeLinkedIn() {
     // Create context with US locale and timezone
     const context = await browser.newContext({
         locale: 'en-US',
-        timezoneId: 'America/New_York',
-        extraHTTPHeaders: {
-            'Accept-Language': 'en-US,en;q=0.9'
-        }
+        timezoneId: 'America/New_York'
     });
     const page = await context.newPage();
 
