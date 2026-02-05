@@ -1662,11 +1662,13 @@
 
             if (error) { console.error(error); return; }
 
-            const sorted = data.map(c => {
-                const msgs = c.messages || [];
-                const last = msgs.length ? msgs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))[0] : null;
-                return { ...c, lastMsg: last, score: getPriority(c, last) };
-            }).sort((a, b) => b.score - a.score);
+            const sorted = data
+                .filter(c => c.engagement_level !== 'irrelevant')
+                .map(c => {
+                    const msgs = c.messages || [];
+                    const last = msgs.length ? msgs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))[0] : null;
+                    return { ...c, lastMsg: last, score: getPriority(c, last) };
+                }).sort((a, b) => b.score - a.score);
 
             renderList(sorted);
             updateStats(sorted);
@@ -2205,6 +2207,10 @@
                     const analysis = c.ai_analysis?.[0] || c.ai_analysis;
                     const lastMsg = (c.messages || []).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))[0];
                     const prospect = c.prospects;
+
+                    // Skip irrelevant conversations (filtered by Kimi)
+                    if (c.engagement_level === 'irrelevant') return;
+                    if (analysis?.recommended_action === 'ignore') return;
 
                     // Determine stage
                     let stage = 'cold';

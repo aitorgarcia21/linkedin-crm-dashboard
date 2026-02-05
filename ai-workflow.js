@@ -96,6 +96,33 @@ async function processConversationsWithAI() {
                 continue;
             }
 
+            // Skip irrelevant conversations (spam, personal, unrelated to IFG)
+            if (analysis.is_relevant === false) {
+                console.log(`   🚫 Non pertinent: ${analysis.irrelevant_reason || 'pas lié à IFG'}`);
+                // Mark as irrelevant in DB so we don't re-analyze
+                await supabase.from('ai_analysis').upsert({
+                    conversation_id: conv.id,
+                    lead_score: 0,
+                    lead_status: 'cold',
+                    sentiment: 'neutral',
+                    interest_level: 'none',
+                    has_tested_ifg: false,
+                    key_points: [],
+                    recommended_action: 'ignore',
+                    follow_up_timing: 'none',
+                    personalization_hints: [],
+                    reasoning: `NON PERTINENT: ${analysis.irrelevant_reason || 'Conversation sans rapport avec IFG'}`,
+                    analyzed_at: new Date().toISOString()
+                }, { onConflict: 'conversation_id' });
+                // Mark conversation as irrelevant
+                await supabase.from('conversations').update({ 
+                    engagement_level: 'irrelevant',
+                    status: 'archived'
+                }).eq('id', conv.id);
+                results.analyzed++;
+                continue;
+            }
+
             console.log(`   📊 Score: ${analysis.lead_score}/100 (${analysis.lead_status})`);
             console.log(`   💡 Action: ${analysis.recommended_action} (${analysis.follow_up_timing})`);
 
@@ -331,6 +358,8 @@ async function getHotLeadsList() {
             )
         `)
         .in('recommended_action', ['follow_up', 'close'])
+        .neq('recommended_action', 'ignore')
+        .gt('lead_score', 0)
         .order('lead_score', { ascending: false });
 
     if (error) {

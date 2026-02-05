@@ -29,24 +29,42 @@ CONTEXTE IFG:
 - Offre: 5 questions gratuites pour tester
 - Produit incroyable qui change la façon de faire de la recherche fiscale
 
+ÉTAPE 1 - FILTRAGE (CRUCIAL):
+D'abord, détermine si cette conversation est PERTINENTE pour IFG.
+Une conversation est pertinente si:
+- On parle de fiscalité, droit fiscal, recherche juridique, IFG, ou du produit
+- C'est un prospect potentiel (avocat, fiscaliste, expert-comptable, directeur fiscal, juriste)
+- On a démarché cette personne pour IFG
+- La personne a montré un intérêt pour un outil de recherche fiscale
+
+Une conversation est NON PERTINENTE si:
+- C'est du spam, de la pub, du recrutement
+- C'est une conversation personnelle sans rapport avec IFG
+- C'est un vendeur qui nous démarche
+- C'est une simple connexion LinkedIn sans échange pertinent
+- Le sujet n'a rien à voir avec la fiscalité ou IFG
+
 ANALYSE DEMANDÉE (réponds en JSON strict):
 {
-  "lead_score": <0-100, score de chaleur du lead>,
+  "is_relevant": <true|false, est-ce une conversation pertinente pour IFG ?>,
+  "irrelevant_reason": "<raison si non pertinent, sinon null>",
+  "lead_score": <0-100, score de chaleur du lead (0 si non pertinent)>,
   "lead_status": "<hot|warm|cold>",
   "sentiment": "<positive|neutral|negative>",
   "interest_level": "<high|medium|low|none>",
   "has_tested_ifg": <true|false, si le prospect a mentionné avoir testé IFG>,
   "key_points": ["point1", "point2"],
-  "recommended_action": "<follow_up|wait|close>",
+  "recommended_action": "<follow_up|wait|close|ignore>",
   "follow_up_timing": "<immediate|3_days|1_week|none>",
   "personalization_hints": ["élément1 à personnaliser", "élément2"],
   "reasoning": "Explication courte de ton analyse"
 }
 
-CRITÈRES DE SCORING:
+CRITÈRES DE SCORING (seulement si pertinent):
 - Hot (80-100): Intérêt explicite, questions précises, demande de test/démo
 - Warm (50-79): Réponse positive, curiosité, mais pas d'engagement immédiat
 - Cold (0-49): Pas de réponse, réponse négative, ou pas d'intérêt
+- Si NON PERTINENT: lead_score = 0, lead_status = "cold", recommended_action = "ignore"
 
 Réponds UNIQUEMENT avec le JSON, sans texte avant ou après.`;
 
