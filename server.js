@@ -29,17 +29,18 @@ app.post('/scrape', async (req, res) => {
     }
 });
 
-// Schedule scraping every minute for testing
-cron.schedule('* * * * *', async () => {
-    console.log('⏰ Scheduled scrape started');
-    try {
-        await scrapeLinkedIn();
-        global.lastRun = new Date().toISOString();
-        console.log('✅ Scheduled scrape completed');
-    } catch (error) {
-        console.error('❌ Scheduled scrape failed:', error);
-    }
-});
+// Cron disabled - scraper runs ONLY when clicking "Sync LinkedIn" button
+// Uncomment below to enable automatic scraping every 6 hours:
+// cron.schedule('0 */6 * * *', async () => {
+//     console.log('⏰ Scheduled scrape started');
+//     try {
+//         await scrapeLinkedIn();
+//         global.lastRun = new Date().toISOString();
+//         console.log('✅ Scheduled scrape completed');
+//     } catch (error) {
+//         console.error('❌ Scheduled scrape failed:', error);
+//     }
+// });
 
 app.listen(PORT, () => {
     console.log(`🔥 Scraper service running on port ${PORT}`);
