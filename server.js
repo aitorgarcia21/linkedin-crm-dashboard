@@ -283,8 +283,9 @@ Réponds UNIQUEMENT avec le message. Rien d'autre.`;
 // Manual trigger endpoint
 app.post('/scrape', async (req, res) => {
     try {
-        console.log('🚀 Manual scrape triggered');
-        const result = await scrapeLinkedIn();
+        const force = req.body?.force === true || req.query?.force === 'true';
+        console.log(`🚀 Manual scrape triggered${force ? ' (FORCE FULL)' : ''}`);
+        const result = await scrapeLinkedIn(force);
         global.lastRun = new Date().toISOString();
         res.json({ success: true, ...result });
     } catch (error) {
