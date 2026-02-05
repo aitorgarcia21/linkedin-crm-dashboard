@@ -1809,6 +1809,38 @@
         </div>
     </main>
 
+    <!-- Analysis Report Modal -->
+    <div class="modal-overlay" id="analysisModal">
+        <div class="modal">
+            <button class="modal-close" onclick="document.getElementById('analysisModal').classList.remove('active')">&times;</button>
+            <h2>🤖 Analyse Kimi K2.5</h2>
+            <div id="analysisSteps"></div>
+            <div id="analysisReport"></div>
+        </div>
+    </div>
+
+    <!-- Kimi Chatbot -->
+    <div class="chatbot-container">
+        <div class="chatbot-panel" id="chatbotPanel">
+            <div class="chatbot-header">
+                🤖 Kimi — Assistant Pipeline IFG
+                <span style="margin-left:auto;font-size:11px;opacity:0.8">connecté à Supabase</span>
+            </div>
+            <div class="chatbot-messages" id="chatbotMessages"></div>
+            <div style="padding:6px 12px;display:flex;gap:4px;flex-wrap:wrap;border-top:1px solid #E5E7EB">
+                <button class="chat-quick-btn" data-q="Qui dois-je contacter en priorité aujourd'hui ?" style="font-size:10px;padding:3px 8px;border-radius:12px;border:1px solid #E5E7EB;background:#F9FAFB;cursor:pointer;color:#374151">🎯 Priorités du jour</button>
+                <button class="chat-quick-btn" data-q="Donne-moi un résumé de mon pipeline" style="font-size:10px;padding:3px 8px;border-radius:12px;border:1px solid #E5E7EB;background:#F9FAFB;cursor:pointer;color:#374151">📊 Résumé pipeline</button>
+                <button class="chat-quick-btn" data-q="Rédige un message pour mon meilleur hot lead" style="font-size:10px;padding:3px 8px;border-radius:12px;border:1px solid #E5E7EB;background:#F9FAFB;cursor:pointer;color:#374151">✍️ Rédiger message</button>
+                <button class="chat-quick-btn" data-q="Quels sont les patterns qui marchent le mieux ?" style="font-size:10px;padding:3px 8px;border-radius:12px;border:1px solid #E5E7EB;background:#F9FAFB;cursor:pointer;color:#374151">📈 Patterns</button>
+            </div>
+            <div class="chatbot-input">
+                <input type="text" id="chatbotInput" placeholder="Demande à Kimi..." />
+                <button id="chatbotSend">Envoyer</button>
+            </div>
+        </div>
+        <button class="chatbot-toggle" id="chatbotToggle">🤖</button>
+    </div>
+
     <script>
         const API_URL = 'https://linkedin-crm-dashboard-production.up.railway.app';
         const SUPABASE_URL = 'https://igyxcobujacampiqndpf.supabase.co';
@@ -2851,38 +2883,6 @@
             });
         });
     </script>
-
-    <!-- Analysis Report Modal -->
-    <div class="modal-overlay" id="analysisModal">
-        <div class="modal">
-            <button class="modal-close" onclick="document.getElementById('analysisModal').classList.remove('active')">&times;</button>
-            <h2>🤖 Analyse Kimi K2.5</h2>
-            <div id="analysisSteps"></div>
-            <div id="analysisReport"></div>
-        </div>
-    </div>
-
-    <!-- Kimi Chatbot -->
-    <div class="chatbot-container">
-        <div class="chatbot-panel" id="chatbotPanel">
-            <div class="chatbot-header">
-                🤖 Kimi — Assistant Pipeline IFG
-                <span style="margin-left:auto;font-size:11px;opacity:0.8">connecté à Supabase</span>
-            </div>
-            <div class="chatbot-messages" id="chatbotMessages"></div>
-            <div style="padding:6px 12px;display:flex;gap:4px;flex-wrap:wrap;border-top:1px solid #E5E7EB">
-                <button class="chat-quick-btn" data-q="Qui dois-je contacter en priorité aujourd'hui ?" style="font-size:10px;padding:3px 8px;border-radius:12px;border:1px solid #E5E7EB;background:#F9FAFB;cursor:pointer;color:#374151">🎯 Priorités du jour</button>
-                <button class="chat-quick-btn" data-q="Donne-moi un résumé de mon pipeline" style="font-size:10px;padding:3px 8px;border-radius:12px;border:1px solid #E5E7EB;background:#F9FAFB;cursor:pointer;color:#374151">📊 Résumé pipeline</button>
-                <button class="chat-quick-btn" data-q="Rédige un message pour mon meilleur hot lead" style="font-size:10px;padding:3px 8px;border-radius:12px;border:1px solid #E5E7EB;background:#F9FAFB;cursor:pointer;color:#374151">✍️ Rédiger message</button>
-                <button class="chat-quick-btn" data-q="Quels sont les patterns qui marchent le mieux ?" style="font-size:10px;padding:3px 8px;border-radius:12px;border:1px solid #E5E7EB;background:#F9FAFB;cursor:pointer;color:#374151">📈 Patterns</button>
-            </div>
-            <div class="chatbot-input">
-                <input type="text" id="chatbotInput" placeholder="Demande à Kimi..." />
-                <button id="chatbotSend">Envoyer</button>
-            </div>
-        </div>
-        <button class="chatbot-toggle" id="chatbotToggle">🤖</button>
-    </div>
 </body>
 
 </html>
