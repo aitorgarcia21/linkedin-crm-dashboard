@@ -3,6 +3,19 @@ const cron = require('node-cron');
 const path = require('path');
 require('dotenv').config();
 const { scrapeLinkedIn } = require('./scrape');
+const { 
+    processConversationsWithAI, 
+    getDailyFollowUpList, 
+    approveFollowUpMessage, 
+    rejectFollowUpMessage 
+} = require('./ai-workflow');
+const {
+    getSequenceAnalytics,
+    getSequenceRecommendations,
+    createABTest,
+    getABTestResults,
+    trackMessagePerformance
+} = require('./analytics-engine');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -113,6 +126,54 @@ app.post('/scrape', async (req, res) => {
         res.json({ success: true, ...result });
     } catch (error) {
         console.error('❌ Scrape error:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// AI Analysis endpoint
+app.post('/analyze', async (req, res) => {
+    try {
+        console.log('🤖 AI analysis triggered');
+        const result = await processConversationsWithAI();
+        res.json(result);
+    } catch (error) {
+        console.error('❌ Analysis error:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// Get daily follow-up list
+app.get('/api/follow-ups', async (req, res) => {
+    try {
+        const result = await getDailyFollowUpList();
+        res.json(result);
+    } catch (error) {
+        console.error('❌ Error fetching follow-ups:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// Approve follow-up message
+app.post('/api/follow-ups/:id/approve', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { edited_message } = req.body;
+        const result = await approveFollowUpMessage(id, edited_message);
+        res.json(result);
+    } catch (error) {
+        console.error('❌ Error approving message:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// Reject follow-up message
+app.post('/api/follow-ups/:id/reject', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const result = await rejectFollowUpMessage(id);
+        res.json(result);
+    } catch (error) {
+        console.error('❌ Error rejecting message:', error);
         res.status(500).json({ success: false, error: error.message });
     }
 });

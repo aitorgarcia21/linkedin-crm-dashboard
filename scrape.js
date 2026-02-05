@@ -185,6 +185,47 @@ async function scrapeLinkedIn() {
                 const linkEl = await page.$('.msg-entity-lockup__entity-title a');
                 const prospectUrl = linkEl ? await linkEl.getAttribute('href') : '';
 
+                // Scrape LinkedIn profile for enrichment
+                let profileData = {
+                    job_title: null,
+                    company: null,
+                    location: null,
+                    sector: null
+                };
+
+                if (prospectUrl && prospectUrl.includes('linkedin.com')) {
+                    try {
+                        console.log(`   📋 Enriching profile: ${prospectName}...`);
+                        await page.goto(prospectUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
+                        await page.waitForTimeout(2000);
+
+                        // Get job title
+                        const titleEl = await page.$('.text-body-medium.break-words');
+                        if (titleEl) profileData.job_title = await titleEl.innerText();
+
+                        // Get company
+                        const companyEl = await page.$('.inline-show-more-text--is-collapsed-with-line-clamp span[aria-hidden="true"]');
+                        if (companyEl) profileData.company = await companyEl.innerText();
+
+                        // Get location
+                        const locationEl = await page.$('.text-body-small.inline.t-black--light.break-words');
+                        if (locationEl) profileData.location = await locationEl.innerText();
+
+                        console.log(`   ✅ Profile enriched: ${profileData.job_title || 'N/A'} @ ${profileData.company || 'N/A'}`);
+
+                        // Go back to messages
+                        await page.goto('https://www.linkedin.com/messaging/', { waitUntil: 'domcontentloaded', timeout: 30000 });
+                        await page.waitForTimeout(2000);
+                        
+                        // Re-click conversation
+                        const convItems2 = await page.$$('.msg-conversation-listitem');
+                        await convItems2[i].click();
+                        await page.waitForTimeout(2000);
+                    } catch (e) {
+                        console.log(`   ⚠️ Profile enrichment failed: ${e.message}`);
+                    }
+                }
+
                 // Scroll to load all messages in conversation
                 await page.evaluate(() => {
                     const msgList = document.querySelector('.msg-s-message-list-container');
@@ -223,7 +264,8 @@ async function scrapeLinkedIn() {
                 allData.push({
                     prospect_name: prospectName.trim(),
                     prospect_url: prospectUrl,
-                    messages
+                    messages,
+                    profile_data: profileData
                 });
 
                 console.log(`✅ Scraped ${i + 1}/${maxConversations}: ${prospectName} (${messages.length} messages)`);
