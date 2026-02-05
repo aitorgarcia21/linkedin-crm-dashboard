@@ -3,7 +3,10 @@ const { createClient } = require('@supabase/supabase-js');
 
 // Config
 const AUTH = process.env.BRIGHT_DATA_AUTH || 'brd-customer-hl_dbce36ae-zone-scraping_browser1:de8e8wg0wkf3';
-const SBR_WS_ENDPOINT = `wss://${AUTH}@brd.superproxy.io:9222`;
+// Add country targeting to username
+const [user, pass] = AUTH.split(':');
+const AUTH_US = `${user}-country-us:${pass}`;
+const SBR_WS_ENDPOINT = `wss://${AUTH_US}@brd.superproxy.io:9222`;
 
 const LINKEDIN_EMAIL = process.env.LINKEDIN_EMAIL || 'aitorgarcia2112@gmail.com';
 const LINKEDIN_PASSWORD = process.env.LINKEDIN_PASSWORD || '21AiPa01....';
