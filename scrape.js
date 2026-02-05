@@ -3,7 +3,10 @@ const { createClient } = require('@supabase/supabase-js');
 
 // Config
 const AUTH = process.env.BRIGHT_DATA_AUTH || 'brd-customer-hl_dbce36ae-zone-scraping_browser1:de8e8wg0wkf3';
-const SBR_WS_ENDPOINT = `wss://${AUTH}@brd.superproxy.io:9222`;
+// Add country targeting to username for stronger enforcement
+const [user, pass] = AUTH.split(':');
+const AUTH_US = `${user}-country-us:${pass}`;
+const SBR_WS_ENDPOINT = `wss://${AUTH_US}@brd.superproxy.io:9222`;
 
 const LINKEDIN_EMAIL = process.env.LINKEDIN_EMAIL || 'aitorgarcia2112@gmail.com';
 const LINKEDIN_PASSWORD = process.env.LINKEDIN_PASSWORD || '21AiPa01....';
@@ -16,8 +19,8 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 async function scrapeLinkedIn() {
     console.log('🔌 Connecting to Bright Data Scraping Browser...');
 
-    // Target France (FR) to match user location
-    const wsEndpoint = `${SBR_WS_ENDPOINT}?country=fr`;
+    // Target US (enforced via Auth string + query param)
+    const wsEndpoint = `${SBR_WS_ENDPOINT}?country=us`;
     const browser = await chromium.connectOverCDP(wsEndpoint);
 
     // Create context with generic locale but robust handling
@@ -57,11 +60,7 @@ async function scrapeLinkedIn() {
         // Check for login form with multiple selectors
         const sessionKey = await page.$('input[name="session_key"]') || await page.$('#username');
 
-        // Add country targeting to username for stronger enforcement
-        const [user, pass] = AUTH.split(':');
-        const AUTH_US = `${user}-country-us:${pass}`;
-        const SBR_WS_ENDPOINT = `wss://${AUTH_US}@brd.superproxy.io:9222`;
-        // ... (keep existing code) ...
+
 
         if (!sessionKey) {
             const pageUrl = page.url();
