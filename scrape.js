@@ -18,14 +18,8 @@ const SUPABASE_URL = process.env.SUPABASE_URL || 'https://igyxcobujacampiqndpf.s
 const SUPABASE_KEY = process.env.SUPABASE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlneXhjb2J1amFjYW1waXFuZHBmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk5NDYxMTUsImV4cCI6MjA4NTUyMjExNX0.8jgz6G0Irj6sRclcBKzYE5VzzXNrxzHgrAz45tHfHpc';
 
 async function scrapeLinkedIn() {
-    // Get existing conversations from Supabase to avoid duplicates
-    console.log('📊 Checking existing data in Supabase...');
-    const supabaseCheck = createClient(SUPABASE_URL, SUPABASE_KEY);
-    const { data: existingConversations } = await supabaseCheck.from('conversations').select('linkedin_conversation_id');
-    const existingConvIds = new Set((existingConversations || []).map(c => c.linkedin_conversation_id));
-    console.log(`✅ Found ${existingConvIds.size} existing conversations in database`);
-
     let browser, context, page;
+    let existingConvIds = new Set();
     
     if (USE_BRIGHT_DATA) {
         console.log('🔌 Connecting to Bright Data...');
@@ -219,12 +213,12 @@ async function scrapeLinkedIn() {
                     }
                 }
 
-                // Check if conversation already exists
-                const convId = prospectUrl || `conv-${prospectName.trim()}`;
-                if (existingConvIds.has(convId)) {
-                    console.log(`⏭️  Skipped ${i + 1}/${conversationElements.length}: ${prospectName} (already in database)`);
-                    continue;
-                }
+                // Skip deduplication check for now (will be done during upload)
+                // const convId = prospectUrl || `conv-${prospectName.trim()}`;
+                // if (existingConvIds.has(convId)) {
+                //     console.log(`⏭️  Skipped ${i + 1}/${maxConversations}: ${prospectName} (already in database)`);
+                //     continue;
+                // }
 
                 allData.push({
                     prospect_name: prospectName.trim(),
@@ -232,7 +226,7 @@ async function scrapeLinkedIn() {
                     messages
                 });
 
-                console.log(`✅ Scraped ${i + 1}/${conversationElements.length}: ${prospectName} (${messages.length} messages) [NEW]`);
+                console.log(`✅ Scraped ${i + 1}/${maxConversations}: ${prospectName} (${messages.length} messages)`);
 
             } catch (e) {
                 console.log(`⚠️ Error on conversation ${i + 1}:`, e.message);
