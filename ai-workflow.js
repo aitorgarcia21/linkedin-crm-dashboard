@@ -15,211 +15,158 @@ const SUPABASE_KEY = process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_KEY;
  */
 async function processConversationsWithAI() {
     const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+    const BATCH_SIZE = 20;
     
     console.log('🤖 Starting AI analysis workflow...');
     
-    // Get conversations that need analysis (no existing analysis or old analysis)
+    // Get conversations + existing analyses in ONE query (no N+1)
     const { data: conversations, error: convError } = await supabase
         .from('conversations')
         .select(`
-            id,
-            linkedin_conversation_id,
-            prospect_id,
-            last_message_at,
-            prospects (
-                id,
-                name,
-                linkedin_url,
-                job_title,
-                company,
-                location,
-                sector
-            ),
-            messages (
-                sender,
-                content,
-                timestamp
-            )
+            id, linkedin_conversation_id, prospect_id, last_message_at,
+            prospects ( id, name, linkedin_url, job_title, company, location, sector ),
+            messages ( sender, content, timestamp ),
+            ai_analysis ( analyzed_at, recommended_action )
         `)
         .order('last_message_at', { ascending: false })
-        .limit(50);
+        .limit(200);
 
     if (convError) {
         console.error('❌ Error fetching conversations:', convError);
         return { success: false, error: convError };
     }
 
-    console.log(`📊 Found ${conversations.length} conversations to analyze`);
-
-    const results = {
-        analyzed: 0,
-        hot_leads: 0,
-        warm_leads: 0,
-        cold_leads: 0,
-        messages_generated: 0,
-        errors: 0
-    };
-
-    for (const conv of conversations) {
-        try {
-            const prospect = conv.prospects;
-            const messages = conv.messages || [];
-
-            if (messages.length === 0) {
-                console.log(`⏭️  Skipping ${prospect.name} (no messages)`);
-                continue;
-            }
-
-            // Check if already analyzed recently (within 24h)
-            const { data: existingAnalysis } = await supabase
-                .from('ai_analysis')
-                .select('analyzed_at')
-                .eq('conversation_id', conv.id)
-                .single();
-
-            if (existingAnalysis) {
-                const hoursSinceAnalysis = (Date.now() - new Date(existingAnalysis.analyzed_at)) / (1000 * 60 * 60);
-                if (hoursSinceAnalysis < 24) {
-                    console.log(`⏭️  Skipping ${prospect.name} (analyzed ${Math.round(hoursSinceAnalysis)}h ago)`);
-                    continue;
-                }
-            }
-
-            console.log(`\n🔍 Analyzing: ${prospect.name}...`);
-
-            // Analyze conversation with AI
-            const { success, analysis } = await analyzeConversation(prospect.name, messages);
-
-            if (!success) {
-                console.log(`⚠️  Analysis failed for ${prospect.name}`);
-                results.errors++;
-                continue;
-            }
-
-            // Skip irrelevant conversations (spam, personal, unrelated to IFG)
-            if (analysis.is_relevant === false) {
-                console.log(`   🚫 Non pertinent: ${analysis.irrelevant_reason || 'pas lié à IFG'}`);
-                // Mark as irrelevant in DB so we don't re-analyze
-                await supabase.from('ai_analysis').upsert({
-                    conversation_id: conv.id,
-                    lead_score: 0,
-                    lead_status: 'cold',
-                    sentiment: 'neutral',
-                    interest_level: 'none',
-                    has_tested_ifg: false,
-                    key_points: [],
-                    recommended_action: 'ignore',
-                    follow_up_timing: 'none',
-                    personalization_hints: [],
-                    reasoning: `NON PERTINENT: ${analysis.irrelevant_reason || 'Conversation sans rapport avec IFG'}`,
-                    analyzed_at: new Date().toISOString()
-                }, { onConflict: 'conversation_id' });
-                // Mark conversation as irrelevant
-                await supabase.from('conversations').update({ 
-                    engagement_level: 'irrelevant',
-                    status: 'archived'
-                }).eq('id', conv.id);
-                results.analyzed++;
-                continue;
-            }
-
-            console.log(`   📊 Score: ${analysis.lead_score}/100 (${analysis.lead_status})`);
-            console.log(`   💡 Action: ${analysis.recommended_action} (${analysis.follow_up_timing})`);
-
-            // Save analysis to database
-            const { data: savedAnalysis, error: analysisError } = await supabase
-                .from('ai_analysis')
-                .upsert({
-                    conversation_id: conv.id,
-                    lead_score: analysis.lead_score,
-                    lead_status: analysis.lead_status,
-                    sentiment: analysis.sentiment,
-                    interest_level: analysis.interest_level,
-                    has_tested_ifg: analysis.has_tested_ifg,
-                    key_points: analysis.key_points,
-                    recommended_action: analysis.recommended_action,
-                    follow_up_timing: analysis.follow_up_timing,
-                    personalization_hints: analysis.personalization_hints,
-                    reasoning: analysis.reasoning,
-                    analyzed_at: new Date().toISOString()
-                }, { onConflict: 'conversation_id' })
-                .select()
-                .single();
-
-            if (analysisError) {
-                console.log(`⚠️  Error saving analysis: ${analysisError.message}`);
-                results.errors++;
-                continue;
-            }
-
-            results.analyzed++;
-            if (analysis.lead_status === 'hot') results.hot_leads++;
-            else if (analysis.lead_status === 'warm') results.warm_leads++;
-            else results.cold_leads++;
-
-            // Generate follow-up message if recommended
-            if (analysis.recommended_action === 'follow_up') {
-                console.log(`   ✍️  Generating follow-up message...`);
-
-                // Check IFG status (mock for now - will connect to IFG Supabase)
-                const ifgStatus = {
-                    has_tested: analysis.has_tested_ifg,
-                    is_subscriber: false
-                };
-
-                const profileData = {
-                    job_title: prospect.job_title,
-                    company: prospect.company,
-                    location: prospect.location,
-                    sector: prospect.sector
-                };
-
-                const { success: msgSuccess, message } = await generateFollowUpMessage(
-                    prospect.name,
-                    profileData,
-                    messages,
-                    analysis,
-                    ifgStatus
-                );
-
-                if (msgSuccess) {
-                    // Save generated message for approval
-                    const { error: msgError } = await supabase
-                        .from('follow_up_messages')
-                        .insert({
-                            conversation_id: conv.id,
-                            ai_analysis_id: savedAnalysis.id,
-                            generated_message: message,
-                            status: 'pending'
-                        });
-
-                    if (!msgError) {
-                        console.log(`   ✅ Message generated and saved for approval`);
-                        results.messages_generated++;
-                    } else {
-                        console.log(`   ⚠️  Error saving message: ${msgError.message}`);
-                    }
-                }
-            }
-
-        } catch (error) {
-            console.error(`❌ Error processing ${conv.prospects?.name}:`, error.message);
-            results.errors++;
+    // Filter: skip no-messages, already analyzed <24h, already ignored
+    const now = Date.now();
+    const toAnalyze = conversations.filter(conv => {
+        const msgs = conv.messages || [];
+        if (msgs.length === 0) return false;
+        if (!conv.prospects?.name) return false;
+        
+        const existing = Array.isArray(conv.ai_analysis) ? conv.ai_analysis[0] : conv.ai_analysis;
+        if (existing?.analyzed_at) {
+            const hours = (now - new Date(existing.analyzed_at).getTime()) / 3600000;
+            if (hours < 24) return false;
         }
+        if (existing?.recommended_action === 'ignore') return false;
+        return true;
+    });
+
+    console.log(`📊 ${conversations.length} conversations, ${toAnalyze.length} à analyser (skip ${conversations.length - toAnalyze.length} déjà faits)`);
+
+    if (toAnalyze.length === 0) {
+        console.log('✅ Rien à analyser !');
+        return { success: true, results: { analyzed: 0, hot_leads: 0, warm_leads: 0, cold_leads: 0, messages_generated: 0, errors: 0 } };
+    }
+
+    const results = { analyzed: 0, hot_leads: 0, warm_leads: 0, cold_leads: 0, messages_generated: 0, errors: 0 };
+
+    // Process in batches of BATCH_SIZE in parallel
+    for (let i = 0; i < toAnalyze.length; i += BATCH_SIZE) {
+        const batch = toAnalyze.slice(i, i + BATCH_SIZE);
+        console.log(`\n⚡ Batch ${Math.floor(i/BATCH_SIZE)+1}/${Math.ceil(toAnalyze.length/BATCH_SIZE)} (${batch.length} profils en parallèle)...`);
+        const startTime = Date.now();
+
+        const batchResults = await Promise.allSettled(
+            batch.map(conv => analyzeOneConversation(supabase, conv, results))
+        );
+
+        const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+        const ok = batchResults.filter(r => r.status === 'fulfilled' && r.value).length;
+        const fail = batchResults.filter(r => r.status === 'rejected').length;
+        console.log(`   ✅ Batch done in ${elapsed}s (${ok} ok, ${fail} errors)`);
     }
 
     console.log('\n📈 AI Analysis Summary:');
     console.log(`   Analyzed: ${results.analyzed}`);
-    console.log(`   🔥 Hot leads: ${results.hot_leads}`);
-    console.log(`   🌡️  Warm leads: ${results.warm_leads}`);
-    console.log(`   ❄️  Cold leads: ${results.cold_leads}`);
-    console.log(`   ✉️  Messages generated: ${results.messages_generated}`);
-    console.log(`   ⚠️  Errors: ${results.errors}`);
+    console.log(`   🔥 Hot: ${results.hot_leads} | 🌡️ Warm: ${results.warm_leads} | ❄️ Cold: ${results.cold_leads}`);
+    console.log(`   ✉️  Messages: ${results.messages_generated} | ⚠️ Errors: ${results.errors}`);
 
-    return {
-        success: true,
-        results
-    };
+    return { success: true, results };
+}
+
+/**
+ * Analyze a single conversation (called in parallel within a batch)
+ */
+async function analyzeOneConversation(supabase, conv, results) {
+    const prospect = conv.prospects;
+    const messages = conv.messages || [];
+
+    try {
+        const { success, analysis } = await analyzeConversation(prospect.name, messages);
+
+        if (!success) {
+            console.log(`   ⚠️ ${prospect.name}: failed`);
+            results.errors++;
+            return false;
+        }
+
+        // Irrelevant
+        if (analysis.is_relevant === false) {
+            console.log(`   🚫 ${prospect.name}: non pertinent`);
+            await Promise.all([
+                supabase.from('ai_analysis').upsert({
+                    conversation_id: conv.id, lead_score: 0, lead_status: 'cold',
+                    sentiment: 'neutral', interest_level: 'none', has_tested_ifg: false,
+                    key_points: [], recommended_action: 'ignore', follow_up_timing: 'none',
+                    personalization_hints: [],
+                    reasoning: `NON PERTINENT: ${analysis.irrelevant_reason || 'Sans rapport IFG'}`,
+                    analyzed_at: new Date().toISOString()
+                }, { onConflict: 'conversation_id' }),
+                supabase.from('conversations').update({ engagement_level: 'irrelevant', status: 'archived' }).eq('id', conv.id)
+            ]);
+            results.analyzed++;
+            return true;
+        }
+
+        console.log(`   📊 ${prospect.name}: ${analysis.lead_score}/100 (${analysis.lead_status}) → ${analysis.recommended_action}`);
+
+        // Save analysis
+        const { data: savedAnalysis, error: analysisError } = await supabase
+            .from('ai_analysis')
+            .upsert({
+                conversation_id: conv.id,
+                lead_score: analysis.lead_score, lead_status: analysis.lead_status,
+                sentiment: analysis.sentiment, interest_level: analysis.interest_level,
+                has_tested_ifg: analysis.has_tested_ifg, key_points: analysis.key_points,
+                recommended_action: analysis.recommended_action,
+                follow_up_timing: analysis.follow_up_timing,
+                personalization_hints: analysis.personalization_hints,
+                reasoning: analysis.reasoning, analyzed_at: new Date().toISOString()
+            }, { onConflict: 'conversation_id' })
+            .select().single();
+
+        if (analysisError) { results.errors++; return false; }
+
+        results.analyzed++;
+        if (analysis.lead_status === 'hot') results.hot_leads++;
+        else if (analysis.lead_status === 'warm') results.warm_leads++;
+        else results.cold_leads++;
+
+        // Generate follow-up if needed
+        if (analysis.recommended_action === 'follow_up') {
+            const ifgStatus = { has_tested: analysis.has_tested_ifg, is_subscriber: false };
+            const profileData = { job_title: prospect.job_title, company: prospect.company, location: prospect.location, sector: prospect.sector };
+
+            const { success: msgSuccess, message } = await generateFollowUpMessage(
+                prospect.name, profileData, messages, analysis, ifgStatus
+            );
+
+            if (msgSuccess && savedAnalysis) {
+                const { error: msgError } = await supabase.from('follow_up_messages').insert({
+                    conversation_id: conv.id, ai_analysis_id: savedAnalysis.id,
+                    generated_message: message, status: 'pending'
+                });
+                if (!msgError) results.messages_generated++;
+            }
+        }
+
+        return true;
+    } catch (error) {
+        console.error(`   ❌ ${prospect?.name}: ${error.message}`);
+        results.errors++;
+        return false;
+    }
 }
 
 /**

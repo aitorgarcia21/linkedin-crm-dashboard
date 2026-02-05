@@ -55,7 +55,7 @@ ANALYSE DEMANDÉE (réponds en JSON strict):
   "has_tested_ifg": <true|false, si le prospect a mentionné avoir testé IFG>,
   "key_points": ["point1", "point2"],
   "recommended_action": "<follow_up|wait|close|ignore>",
-  "follow_up_timing": "<immediate|3_days|1_week|none>",
+  "follow_up_timing": "<immediate|2_days|3_days|5_days|7_days|10_days|14_days|none>",
   "personalization_hints": ["élément1 à personnaliser", "élément2"],
   "reasoning": "Explication courte de ton analyse"
 }
@@ -65,6 +65,14 @@ CRITÈRES DE SCORING (seulement si pertinent):
 - Warm (50-79): Réponse positive, curiosité, mais pas d'engagement immédiat
 - Cold (0-49): Pas de réponse, réponse négative, ou pas d'intérêt
 - Si NON PERTINENT: lead_score = 0, lead_status = "cold", recommended_action = "ignore"
+
+CADENCE DE RELANCE (follow_up_timing):
+- Hot lead → immediate ou 2_days (ne pas laisser refroidir)
+- Warm lead → 3_days (premier follow-up), puis 5_days (deuxième)
+- Cold lead → 5_days (premier), puis 7_days, puis 14_days
+- Si le prospect vient de répondre → immediate ou 2_days
+- Si on a déjà relancé 2+ fois sans réponse → 10_days ou 14_days (espacer)
+- Si conversation morte depuis longtemps → 14_days ou none
 
 Réponds UNIQUEMENT avec le JSON, sans texte avant ou après.`;
 
@@ -147,110 +155,48 @@ async function generateFollowUpMessage(prospectName, profileData, conversationHi
                         profileData.job_title?.toLowerCase().includes('counsel');
         const title = isLawyer ? 'Maître' : prospectName.split(' ').pop(); // Last name for non-lawyers
 
-        const prompt = `Tu es Aitor Garcia, fondateur d'IFG (système de recherche adapté pour la fiscalité).
+        const prompt = `Tu écris un message LinkedIn de relance pour Aitor Garcia, fondateur d'IFG.
 
-CONTEXTE:
-Prospect: ${prospectName}
-Titre à utiliser: ${title}
-Poste: ${profileData.job_title || 'Non spécifié'}
-Entreprise: ${profileData.company || 'Non spécifié'}
-Secteur: ${profileData.sector || 'Non spécifié'}
-Statut IFG: ${ifgStatus.has_tested ? 'A testé IFG' : 'N\'a jamais testé'}
-${ifgStatus.is_subscriber ? 'ABONNÉ IFG' : ''}
-
-ANALYSE DU LEAD:
-Score: ${analysis.lead_score}/100 (${analysis.lead_status})
-Intérêt: ${analysis.interest_level}
-Points clés: ${analysis.key_points.join(', ')}
+PROSPECT:
+- Nom: ${prospectName} (appelle-le "${title}")
+- Poste: ${profileData.job_title || '?'}
+- Entreprise: ${profileData.company || '?'}
+- Secteur: ${profileData.sector || '?'}
+- Score: ${analysis.lead_score}/100 (${analysis.lead_status})
+- Intérêt: ${analysis.interest_level}
+- Points clés conversation: ${analysis.key_points.join(', ')}
+${ifgStatus.has_tested ? '- A DÉJÀ TESTÉ IFG' : ''}
+${ifgStatus.is_subscriber ? '- EST ABONNÉ IFG' : ''}
 
 CONVERSATION PRÉCÉDENTE:
 ${conversationText}
 
-POSITIONNEMENT IFG (CRUCIAL):
-- IFG est un COPILOTE, pas un remplacement de l'expert
-- C'est un système de recherche spécialisé pour la fiscalité
-- Produit INCROYABLE qui transforme la recherche fiscale
-- On doit TOUT GAGNER avec ce produit - chaque message doit closer
+QU'EST-CE QU'IFG:
+IFG est un outil de recherche spécialisé en fiscalité. C'est un assistant qui aide les professionnels (avocats, experts-comptables, fiscalistes) à trouver rapidement les textes, jurisprudences et doctrines pertinents. Ce n'est PAS un remplacement — c'est un copilote qui accélère leur travail de recherche.
 
-PSYCHOLOGIE DE VENTE AVANCÉE:
-- Crée du FOMO (peur de rater quelque chose)
-- Utilise la preuve sociale (autres fiscalistes qui utilisent IFG)
-- Montre la valeur immédiate et concrète
-- Crée de l'urgence sans être insistant
-- Pose des questions qui font réfléchir le prospect
-- Utilise des chiffres concrets (gain de temps, précision)
+RÈGLES ABSOLUES DU MESSAGE:
+1. COURT : 2-3 phrases maximum. Comme un vrai message LinkedIn entre humains.
+2. NATUREL : Écris comme un humain, pas comme un robot commercial. Pas de formules toutes faites.
+3. PERSONNALISÉ : Réfère-toi à ce qui a été dit dans la conversation. Reprends le fil naturellement.
+4. RESPECTUEUX : Jamais de pression, jamais de FOMO, jamais de manipulation. Pas de "vos confrères font déjà X".
+5. PAS DE CHIFFRES INVENTÉS : Ne dis pas "10-15h/semaine" ou "30 secondes". Pas de stats sorties de nulle part.
+6. PAS D'APPEL TÉLÉPHONIQUE : Ne propose jamais d'appel.
+7. SIMPLE : Une question ouverte ou une proposition concrète. Pas de pitch.
+8. VOUVOIEMENT toujours.
+9. Signe "Aitor" à la fin.
 
-TECHNIQUES DE CLOSING:
-- Assume que le prospect va tester (pas "si" mais "quand")
-- Réduis la friction au maximum (5 questions gratuites = zéro risque)
-- Crée un sentiment d'exclusivité
-- Montre que tu comprends VRAIMENT ses problèmes métier
-- Utilise des success stories subtiles
+SELON LE CONTEXTE:
+- Si le prospect a montré de l'intérêt → propose simplement de tester avec 5 questions gratuites
+- Si le prospect a déjà testé → demande son retour d'expérience, ce qui lui a plu ou manqué
+- Si le prospect est froid → rebondis sur un élément de son profil ou de la conversation, pose une question sincère
+- Si le prospect n'a pas répondu → message ultra court, juste une relance douce ("${title}, est-ce que vous avez eu le temps d'y jeter un œil ?")
 
-CONSIGNES STRICTES:
-1. Message COURT (3-4 lignes max) mais PERCUTANT
-2. Utilise "${title}" (Maître si avocat, nom de famille sinon)
-3. Ton ULTRA MALIN, COMMERCIAL et ADAPTÉ à l'interlocuteur
-4. Personnalisation EXTRÊME avec profil + conversation
-5. Appel à l'action CLAIR et IRRÉSISTIBLE
-6. JAMAIS proposer d'appel téléphonique
-7. IFG = copilote qui DÉCUPLE leur efficacité
-8. Système de recherche qui fait gagner 10-15h/semaine
-9. Ne mentionne PAS l'IA
-10. Si testé IFG: demande retour + propose accompagnement premium
-11. Si abonné: remercie + propose optimisation/formation
-12. Utilise des chiffres concrets (temps gagné, précision, sources)
-13. Crée du FOMO: "Plusieurs fiscalistes de [secteur] l'utilisent déjà"
-14. Question finale qui force la réflexion
+EXEMPLES DE BON TON:
+- "Bonjour ${title}, suite à notre échange, je me demandais si vous aviez eu l'occasion de tester. N'hésitez pas si vous avez des questions. Aitor"
+- "${title}, j'espère que tout va bien. Je reste disponible si le sujet recherche fiscale revient sur la table. Aitor"
+- "Bonjour ${title}, votre remarque sur [sujet de la conv] m'a fait réfléchir. On a justement travaillé là-dessus. Ça vous dit d'essayer ? Aitor"
 
-FRAMEWORKS DE VENTE AVANCÉS (YC + TOP B2B SaaS):
-
-1. CHALLENGER SALE (Commercial Teaching):
-   - WARMER: Décris leur problème pour qu'ils hochent la tête
-   - REFRAME: Donne un insight qu'ils n'avaient pas considéré
-   - RATIONAL DROWNING: Chiffre le coût (15h/semaine = 780h/an perdues)
-   - EMOTIONAL IMPACT: Histoire d'un confrère qui a souffert du même problème
-   - NEW WAY: Montre le nouveau comportement à adopter
-   - SOLUTION: IFG comme enabler de ce nouveau comportement
-
-2. SPIN SELLING (Questions Stratégiques):
-   - SITUATION: "Combien de temps passez-vous sur la recherche fiscale ?"
-   - PROBLEM: "Quelle est votre plus grande frustration ?"
-   - IMPLICATION: "Quel impact sur votre rentabilité ?"
-   - NEED-PAYOFF: "Que changerait un gain de 10-15h/semaine ?"
-
-3. SECRETS YC B2B SaaS:
-   - Questions simples qui déclenchent conversations (pas pitchs)
-   - Humanise: langage naturel, imperfections volontaires
-   - Social proof spécifique au secteur
-   - Premier message long, follow-up ultra court ("${title} ?")
-   - Valeur gratuite upfront (5 questions = zéro risque)
-   - CTA sans friction (assume qu'ils vont tester)
-   - Personnalisation EXTRÊME (pas générique)
-   - FOMO subtil mais puissant
-   - Question finale qui force réflexion
-
-4. PSYCHOLOGIE DE CONVERSION:
-   - Scarcité: "Places limitées pour fiscalistes de votre secteur"
-   - Social Proof: "Plus de 50 fiscalistes l'utilisent quotidiennement"
-   - Réciprocité: Donne avant de demander
-   - Loss Aversion: "Pendant que vous cherchez, vos confrères gagnent 15h/semaine"
-
-5. STRUCTURE MESSAGE PARFAITE:
-   HOOK (3 sec): Question provocante OU stat surprenante OU observation spécifique
-   VALUE PROP: IFG = copilote qui [bénéfice] en [temps gagné]
-   SOCIAL PROOF: Utilisateurs similaires + résultats concrets
-   CTA: Zéro engagement, spécifique, question-based
-
-EXEMPLES DE HOOKS ULTRA PUISSANTS:
-- "${title}, 15h/semaine de recherche en moins, ça changerait quoi pour vous ?"
-- "J'ai remarqué votre expertise en [domaine] chez [entreprise] - exactement le profil qui tire le max d'IFG"
-- "Plusieurs fiscalistes de [secteur] m'ont dit la même chose : 'Pourquoi j'ai attendu si longtemps ?'"
-- "Pendant que vous lisez ceci, un confrère vient de trouver 5 jurisprudences en 30 secondes avec IFG"
-- "Votre expertise en [domaine] + IFG = vous devenez imbattable"
-- "Question rapide : combien de temps avez-vous perdu cette semaine à chercher dans 10 sources différentes ?"
-
-Réponds UNIQUEMENT avec le message, sans introduction ni conclusion.`;
+Réponds UNIQUEMENT avec le message. Rien d'autre.`;
 
         const response = await fetch(`${KIMI_BASE_URL}/chat/completions`, {
             method: 'POST',

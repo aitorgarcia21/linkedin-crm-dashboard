@@ -135,6 +135,54 @@ Critères :
     }
 });
 
+// Generate a follow-up message for a conversation (called from dashboard detail panel)
+app.post('/api/generate-message', async (req, res) => {
+    const { prospect_name, conversation } = req.body;
+    if (!prospect_name || !conversation) return res.status(400).json({ success: false, error: 'prospect_name and conversation required' });
+
+    try {
+        const prompt = `Tu écris un message LinkedIn de relance pour Aitor Garcia, fondateur d'IFG.
+
+PROSPECT: ${prospect_name}
+CONVERSATION:
+${conversation}
+
+QU'EST-CE QU'IFG:
+IFG est un outil de recherche spécialisé en fiscalité. Un copilote qui aide avocats, experts-comptables et fiscalistes à trouver rapidement textes, jurisprudences et doctrines. Ce n'est pas un remplacement, c'est un accélérateur.
+
+RÈGLES:
+1. COURT : 2-3 phrases max. Comme un vrai message LinkedIn humain.
+2. NATUREL : Pas de formules commerciales. Pas de robot.
+3. PERSONNALISÉ : Reprends le fil de la conversation naturellement.
+4. RESPECTUEUX : Jamais de pression, jamais de FOMO, jamais de manipulation.
+5. PAS DE CHIFFRES INVENTÉS : Pas de "10-15h/semaine" ou "30 secondes".
+6. PAS D'APPEL TÉLÉPHONIQUE.
+7. VOUVOIEMENT toujours.
+8. Signe "Aitor" à la fin.
+
+Réponds UNIQUEMENT avec le message. Rien d'autre.`;
+
+        const fetch = require('node-fetch');
+        const response = await fetch(`${KIMI_BASE_URL}/chat/completions`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${KIMI_API_KEY}` },
+            body: JSON.stringify({ model: KIMI_MODEL, messages: [{ role: 'user', content: prompt }], temperature: 1, max_tokens: 1024 })
+        });
+
+        if (!response.ok) {
+            const errText = await response.text();
+            return res.status(502).json({ success: false, error: `Kimi ${response.status}` });
+        }
+
+        const data = await response.json();
+        const message = (data.choices[0].message.content || '').trim();
+        res.json({ success: true, message });
+    } catch (error) {
+        console.error('Generate message error:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 // Manual trigger endpoint
 app.post('/scrape', async (req, res) => {
     try {
