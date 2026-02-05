@@ -15,12 +15,36 @@ async function analyzeConversation(prospectName, messages) {
             `${msg.sender === 'me' ? 'Moi (Aitor)' : prospectName}: ${msg.content}`
         ).join('\n\n');
 
+        // Calculate timing context from messages
+        const sorted = [...messages].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+        const lastMsg = sorted[0];
+        const lastMsgDate = lastMsg ? new Date(lastMsg.timestamp) : null;
+        const daysSinceLastMsg = lastMsgDate ? Math.round((Date.now() - lastMsgDate.getTime()) / 86400000) : 999;
+        const lastMsgBy = lastMsg?.sender === 'me' ? 'Moi (Aitor)' : prospectName;
+        const myMsgCount = messages.filter(m => m.sender === 'me').length;
+        const theirMsgCount = messages.filter(m => m.sender !== 'me').length;
+        const unansweredFollowUps = (() => {
+            let count = 0;
+            for (const m of sorted) {
+                if (m.sender === 'me') count++;
+                else break;
+            }
+            return count;
+        })();
+
         const prompt = `Tu es un assistant commercial expert pour IFG, un système de recherche adapté pour la fiscalité.
 
 Analyse cette conversation LinkedIn et fournis une évaluation structurée :
 
 CONVERSATION:
 ${conversationText}
+
+CONTEXTE TEMPOREL (CRUCIAL pour le timing):
+- Date d'aujourd'hui: ${new Date().toLocaleDateString('fr-FR')}
+- Dernier message: il y a ${daysSinceLastMsg} jour(s) (${lastMsgDate ? lastMsgDate.toLocaleDateString('fr-FR') : 'jamais'})
+- Dernier message envoyé par: ${lastMsgBy}
+- Mes messages envoyés: ${myMsgCount} | Leurs réponses: ${theirMsgCount}
+- Messages consécutifs sans réponse de leur part: ${unansweredFollowUps}
 
 CONTEXTE IFG:
 - IFG est un copilote IA pour la recherche fiscale (ne remplace PAS l'expert, l'assiste)
@@ -66,13 +90,24 @@ CRITÈRES DE SCORING (seulement si pertinent):
 - Cold (0-49): Pas de réponse, réponse négative, ou pas d'intérêt
 - Si NON PERTINENT: lead_score = 0, lead_status = "cold", recommended_action = "ignore"
 
-CADENCE DE RELANCE (follow_up_timing):
-- Hot lead → immediate ou 2_days (ne pas laisser refroidir)
-- Warm lead → 3_days (premier follow-up), puis 5_days (deuxième)
-- Cold lead → 5_days (premier), puis 7_days, puis 14_days
-- Si le prospect vient de répondre → immediate ou 2_days
-- Si on a déjà relancé 2+ fois sans réponse → 10_days ou 14_days (espacer)
-- Si conversation morte depuis longtemps → 14_days ou none
+CADENCE DE RELANCE (follow_up_timing) — BASÉE SUR LE CONTEXTE TEMPOREL CI-DESSUS:
+Le timing dépend de: qui a envoyé le dernier message, il y a combien de jours, et combien de relances sans réponse.
+
+SI LE PROSPECT A RÉPONDU EN DERNIER (c'est à nous de répondre):
+- → immediate (répondre vite, ne pas laisser refroidir)
+
+SI C'EST MOI QUI AI ENVOYÉ LE DERNIER MESSAGE (j'attends leur réponse):
+- 0 relance sans réponse + dernier msg < 3j → wait (patience, trop tôt)
+- 0 relance sans réponse + dernier msg 3-5j → 2_days (relancer doucement)
+- 1 relance sans réponse + dernier msg < 5j → wait (laisser respirer)
+- 1 relance sans réponse + dernier msg 5-7j → 3_days
+- 2 relances sans réponse → 5_days (espacer)
+- 3+ relances sans réponse → 10_days ou 14_days (dernier essai)
+- 4+ relances sans réponse → none (arrêter, ne pas harceler)
+
+AJUSTEMENT PAR TEMPÉRATURE:
+- Hot lead: diviser le timing par 2 (plus urgent)
+- Cold lead: multiplier par 1.5 (plus patient)
 
 Réponds UNIQUEMENT avec le JSON, sans texte avant ou après.`;
 
