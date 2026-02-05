@@ -17,7 +17,22 @@ const LINKEDIN_PASSWORD = process.env.LINKEDIN_PASSWORD || '21AiPa01....';
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://igyxcobujacampiqndpf.supabase.co';
 const SUPABASE_KEY = process.env.SUPABASE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlneXhjb2J1amFjYW1waXFuZHBmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk5NDYxMTUsImV4cCI6MjA4NTUyMjExNX0.8jgz6G0Irj6sRclcBKzYE5VzzXNrxzHgrAz45tHfHpc';
 
-async function scrapeLinkedIn() {
+async function scrapeLinkedIn(forceFullScrape = false) {
+    // === SMART CHECK: Query Supabase for latest message timestamp ===
+    const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+    const { data: latestConv } = await supabase
+        .from('conversations')
+        .select('last_message_at')
+        .order('last_message_at', { ascending: false })
+        .limit(1)
+        .single();
+    
+    const lastKnownTimestamp = latestConv?.last_message_at ? new Date(latestConv.last_message_at) : null;
+    const totalConvsInDB = await supabase.from('conversations').select('id', { count: 'exact', head: true });
+    const dbCount = totalConvsInDB.count || 0;
+    
+    console.log(`📊 DB status: ${dbCount} conversations, last message: ${lastKnownTimestamp ? lastKnownTimestamp.toLocaleString('fr-FR') : 'never'}`);
+
     let browser, context, page;
     let existingConvIds = new Set();
     
@@ -134,41 +149,74 @@ async function scrapeLinkedIn() {
             console.log('🍪 Cookie handling error:', e.message); 
         }
 
-        // Scroll to load ALL conversations
-        console.log('📜 Loading all conversations...');
-        let previousCount = 0;
-        let currentCount = 0;
-        let scrollAttempts = 0;
-        const maxScrollAttempts = 50;
+        // === SMART SCRAPE: Only check first page for new messages ===
+        console.log('📜 Quick check: scanning visible conversations...');
+        await page.waitForTimeout(3000);
 
-        do {
-            previousCount = currentCount;
-            
-            // Scroll conversation list to bottom
-            await page.evaluate(() => {
-                const convList = document.querySelector('.msg-conversations-container__conversations-list');
-                if (convList) {
-                    convList.scrollTop = convList.scrollHeight;
-                }
+        // Get first page of conversations (no scrolling = fast)
+        const firstPageConvs = await page.$$('.msg-conversation-listitem');
+        console.log(`� Visible conversations: ${firstPageConvs.length}`);
+
+        // Quick check: extract timestamps from visible conversations to detect new messages
+        const visibleConvData = await page.evaluate(() => {
+            const items = document.querySelectorAll('.msg-conversation-listitem');
+            return Array.from(items).map(item => {
+                const nameEl = item.querySelector('.msg-conversation-listitem__participant-names');
+                const timeEl = item.querySelector('.msg-conversation-listitem__time-stamp') || item.querySelector('time');
+                const unreadEl = item.querySelector('.msg-conversation-listitem__unread-count') || item.querySelector('.notification-badge');
+                return {
+                    name: nameEl?.textContent?.trim() || '',
+                    time: timeEl?.textContent?.trim() || timeEl?.getAttribute('datetime') || '',
+                    hasUnread: !!unreadEl || item.classList.contains('msg-conversation-listitem--unread')
+                };
             });
-            
-            await page.waitForTimeout(2000);
-            
-            const conversations = await page.$$('.msg-conversation-listitem');
-            currentCount = conversations.length;
-            scrollAttempts++;
-            
-            console.log(`📊 Loaded ${currentCount} conversations (attempt ${scrollAttempts}/${maxScrollAttempts})`);
-            
-        } while (currentCount > previousCount && scrollAttempts < maxScrollAttempts);
+        });
 
-        // Get final conversation list
+        const unreadCount = visibleConvData.filter(c => c.hasUnread).length;
+        console.log(`📬 Unread conversations: ${unreadCount} / ${visibleConvData.length}`);
+
+        // If no unread and DB already has data, skip full scrape
+        if (!forceFullScrape && unreadCount === 0 && dbCount > 0) {
+            console.log('✅ No new messages detected — skipping full scrape');
+            await browser.close();
+            return { scraped: 0, saved: 0, skipped: true, reason: 'no_new_messages' };
+        }
+
+        // Only scrape conversations with unread messages (or all if first time / forced)
+        const shouldScrapeAll = forceFullScrape || dbCount === 0;
+        let maxConversations;
+        
+        if (shouldScrapeAll) {
+            // First time or forced: scroll to load more (but cap at 100 to avoid timeout)
+            console.log('📜 Full scrape mode: loading more conversations...');
+            let previousCount = 0;
+            let currentCount = firstPageConvs.length;
+            let scrollAttempts = 0;
+            const maxScrollAttempts = 15; // Cap at ~15 scrolls instead of 50
+
+            while (currentCount > previousCount && scrollAttempts < maxScrollAttempts) {
+                previousCount = currentCount;
+                await page.evaluate(() => {
+                    const convList = document.querySelector('.msg-conversations-container__conversations-list');
+                    if (convList) convList.scrollTop = convList.scrollHeight;
+                });
+                await page.waitForTimeout(2000);
+                const convs = await page.$$('.msg-conversation-listitem');
+                currentCount = convs.length;
+                scrollAttempts++;
+                console.log(`📊 Loaded ${currentCount} conversations (scroll ${scrollAttempts}/${maxScrollAttempts})`);
+            }
+            maxConversations = currentCount;
+        } else {
+            // Smart mode: only scrape first page (unread messages are always at top)
+            maxConversations = Math.min(firstPageConvs.length, 40);
+            console.log(`⚡ Smart mode: checking top ${maxConversations} conversations for new messages`);
+        }
+
         const conversationElements = await page.$$('.msg-conversation-listitem');
-        console.log(`📨 Total conversations found: ${conversationElements.length}`);
-
         const allData = [];
         const TEST_MODE = process.env.TEST_MODE === 'true';
-        const maxConversations = TEST_MODE ? 1 : conversationElements.length;
+        if (TEST_MODE) maxConversations = 1;
 
         for (let i = 0; i < maxConversations; i++) {
             try {

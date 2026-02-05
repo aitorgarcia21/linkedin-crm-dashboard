@@ -165,10 +165,10 @@ app.post('/api/full-analysis', async (req, res) => {
         const steps = [];
         const start = Date.now();
 
-        // Step 1: Scrape
+        // Step 1: Smart scrape (only new messages)
         steps.push({ step: 'scrape', status: 'running', started: Date.now() });
-        console.log('🔄 Full analysis: Step 1 - Scraping...');
-        const scrapeResult = await scrapeLinkedIn();
+        console.log('🔄 Full analysis: Step 1 - Smart scraping...');
+        const scrapeResult = await scrapeLinkedIn(false); // false = smart mode
         steps[0].status = 'done';
         steps[0].result = { scraped: scrapeResult.scraped, saved: scrapeResult.saved };
         steps[0].duration = Date.now() - steps[0].started;
