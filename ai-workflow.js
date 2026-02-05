@@ -290,9 +290,160 @@ async function rejectFollowUpMessage(messageId) {
     return { success: true, message: data };
 }
 
+/**
+ * Get hot leads list - sorted by priority, who to contact first
+ * Returns categorized lists: urgent, today, this_week
+ */
+async function getHotLeadsList() {
+    const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    // Get all conversations with their latest AI analysis
+    const { data: analyses, error } = await supabase
+        .from('ai_analysis')
+        .select(`
+            id,
+            lead_score,
+            lead_status,
+            sentiment,
+            interest_level,
+            has_tested_ifg,
+            recommended_action,
+            follow_up_timing,
+            key_points,
+            personalization_hints,
+            reasoning,
+            analyzed_at,
+            conversation_id,
+            conversations (
+                id,
+                linkedin_conversation_id,
+                last_message_by,
+                last_message_at,
+                prospects (
+                    id,
+                    name,
+                    linkedin_url,
+                    job_title,
+                    company,
+                    location,
+                    sector
+                )
+            )
+        `)
+        .in('recommended_action', ['follow_up', 'close'])
+        .order('lead_score', { ascending: false });
+
+    if (error) {
+        console.error('❌ Error fetching hot leads:', error);
+        return { success: false, error };
+    }
+
+    // Check for pending follow-up messages
+    const { data: pendingMessages } = await supabase
+        .from('follow_up_messages')
+        .select('conversation_id, generated_message, status')
+        .in('status', ['pending', 'approved']);
+
+    const pendingByConv = {};
+    (pendingMessages || []).forEach(m => {
+        pendingByConv[m.conversation_id] = m;
+    });
+
+    // Categorize leads
+    const now = new Date();
+    const urgent = [];    // Hot leads + they replied / immediate follow-up
+    const today = [];     // Warm leads needing follow-up today
+    const thisWeek = [];  // Scheduled follow-ups this week
+
+    for (const analysis of analyses) {
+        const conv = analysis.conversations;
+        if (!conv || !conv.prospects) continue;
+
+        const prospect = conv.prospects;
+        const lastMessageDate = new Date(conv.last_message_at);
+        const hoursSinceLastMessage = (now - lastMessageDate) / (1000 * 60 * 60);
+        const theyRepliedLast = conv.last_message_by === 'them';
+
+        const lead = {
+            prospect_id: prospect.id,
+            name: prospect.name,
+            linkedin_url: prospect.linkedin_url,
+            job_title: prospect.job_title,
+            company: prospect.company,
+            sector: prospect.sector,
+            lead_score: analysis.lead_score,
+            lead_status: analysis.lead_status,
+            sentiment: analysis.sentiment,
+            interest_level: analysis.interest_level,
+            has_tested_ifg: analysis.has_tested_ifg,
+            key_points: analysis.key_points,
+            reasoning: analysis.reasoning,
+            follow_up_timing: analysis.follow_up_timing,
+            last_message_by: conv.last_message_by,
+            last_message_at: conv.last_message_at,
+            hours_since_last: Math.round(hoursSinceLastMessage),
+            has_pending_message: !!pendingByConv[conv.id],
+            pending_message: pendingByConv[conv.id]?.generated_message || null,
+            conversation_id: conv.id
+        };
+
+        // URGENT: They replied and we haven't responded, or hot lead needing immediate action
+        if (theyRepliedLast && hoursSinceLastMessage < 48) {
+            lead.priority = 'urgent';
+            lead.reason = `⚡ ${prospect.name} a répondu il y a ${lead.hours_since_last}h - RÉPONDRE MAINTENANT`;
+            urgent.push(lead);
+        } else if (analysis.lead_status === 'hot' && analysis.follow_up_timing === 'immediate') {
+            lead.priority = 'urgent';
+            lead.reason = `🔥 Lead chaud (${analysis.lead_score}/100) - relance immédiate`;
+            urgent.push(lead);
+        }
+        // TODAY: Warm/hot leads with 3-day follow-up timing that's due
+        else if (analysis.follow_up_timing === '3_days' && hoursSinceLastMessage >= 48) {
+            lead.priority = 'today';
+            lead.reason = `📅 Relance prévue aujourd'hui (${lead.hours_since_last}h depuis dernier msg)`;
+            today.push(lead);
+        } else if (analysis.lead_status === 'hot' && hoursSinceLastMessage >= 24) {
+            lead.priority = 'today';
+            lead.reason = `🔥 Lead chaud sans réponse depuis ${lead.hours_since_last}h`;
+            today.push(lead);
+        }
+        // THIS WEEK: 1-week follow-ups or warm leads
+        else if (analysis.follow_up_timing === '1_week' && hoursSinceLastMessage >= 120) {
+            lead.priority = 'this_week';
+            lead.reason = `📆 Relance hebdo (${Math.round(hoursSinceLastMessage / 24)}j depuis dernier msg)`;
+            thisWeek.push(lead);
+        } else if (analysis.lead_status === 'warm' && hoursSinceLastMessage >= 72) {
+            lead.priority = 'this_week';
+            lead.reason = `🌡️ Lead tiède à relancer (${Math.round(hoursSinceLastMessage / 24)}j)`;
+            thisWeek.push(lead);
+        }
+    }
+
+    // Sort each list by score descending
+    urgent.sort((a, b) => b.lead_score - a.lead_score);
+    today.sort((a, b) => b.lead_score - a.lead_score);
+    thisWeek.sort((a, b) => b.lead_score - a.lead_score);
+
+    return {
+        success: true,
+        summary: {
+            urgent: urgent.length,
+            today: today.length,
+            this_week: thisWeek.length,
+            total: urgent.length + today.length + thisWeek.length
+        },
+        lists: {
+            urgent,
+            today,
+            this_week: thisWeek
+        }
+    };
+}
+
 module.exports = {
     processConversationsWithAI,
     getDailyFollowUpList,
     approveFollowUpMessage,
-    rejectFollowUpMessage
+    rejectFollowUpMessage,
+    getHotLeadsList
 };

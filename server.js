@@ -7,7 +7,8 @@ const {
     processConversationsWithAI, 
     getDailyFollowUpList, 
     approveFollowUpMessage, 
-    rejectFollowUpMessage 
+    rejectFollowUpMessage,
+    getHotLeadsList
 } = require('./ai-workflow');
 const {
     getSequenceAnalytics,
@@ -232,20 +233,63 @@ app.get('/api/ab-tests/:id/results', async (req, res) => {
     }
 });
 
-// Cron disabled - scraper runs ONLY when clicking "Sync LinkedIn" button
-// Uncomment below to enable automatic scraping every 6 hours:
-// cron.schedule('0 */6 * * *', async () => {
-//     console.log('⏰ Scheduled scrape started');
-//     try {
-//         await scrapeLinkedIn();
-//         global.lastRun = new Date().toISOString();
-//         console.log('✅ Scheduled scrape completed');
-//     } catch (error) {
-//         console.error('❌ Scheduled scrape failed:', error);
-//     }
-// });
+// Hot leads list - sorted by priority, who to contact first
+app.get('/api/hot-leads', async (req, res) => {
+    try {
+        const result = await getHotLeadsList();
+        res.json(result);
+    } catch (error) {
+        console.error('❌ Hot leads error:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// Auto-sync: every hour, scrape new messages + re-analyze + generate lists
+let isSyncing = false;
+async function autoSync() {
+    if (isSyncing) {
+        console.log('⏳ Sync already running, skipping...');
+        return;
+    }
+    isSyncing = true;
+    try {
+        console.log('\n🔄 === AUTO-SYNC STARTED ===');
+        console.log('📅 ' + new Date().toLocaleString('fr-FR', { timeZone: 'Europe/Paris' }));
+
+        // Step 1: Scrape new LinkedIn messages
+        console.log('\n📬 Step 1: Scraping new LinkedIn messages...');
+        const scrapeResult = await scrapeLinkedIn();
+        global.lastRun = new Date().toISOString();
+        console.log(`✅ Scrape done: ${scrapeResult.scraped} conversations, ${scrapeResult.saved} saved`);
+
+        // Step 2: AI analysis on all conversations (skips recently analyzed)
+        console.log('\n🤖 Step 2: Running AI analysis...');
+        const analysisResult = await processConversationsWithAI();
+        console.log(`✅ Analysis done: ${analysisResult.results?.analyzed || 0} analyzed, ${analysisResult.results?.hot_leads || 0} hot leads`);
+
+        console.log('\n✅ === AUTO-SYNC COMPLETE ===\n');
+    } catch (error) {
+        console.error('❌ Auto-sync error:', error.message);
+    } finally {
+        isSyncing = false;
+    }
+}
+
+// Schedule: every hour at minute 0
+cron.schedule('0 * * * *', autoSync);
+
+// Manual sync endpoint (also used by dashboard button)
+app.post('/auto-sync', async (req, res) => {
+    try {
+        autoSync(); // Fire and forget
+        res.json({ success: true, message: 'Auto-sync started in background' });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
 
 app.listen(PORT, () => {
     console.log(`🔥 Scraper service running on port ${PORT}`);
-    console.log('📅 Cron scheduled: every 6 hours');
+    console.log('📅 Auto-sync scheduled: every hour');
+    console.log('🔥 Hot leads list available at /api/hot-leads');
 });
