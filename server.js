@@ -108,7 +108,8 @@ Critères :
                     { role: 'system', content: systemPrompt },
                     { role: 'user', content: `Conversation avec ${prospect_name} :\n\n${conversation}` }
                 ],
-                temperature: 0.3
+                temperature: 1,
+                max_tokens: 4096
             })
         });
 
@@ -377,8 +378,8 @@ INSTRUCTIONS:
             body: JSON.stringify({
                 model: kimiModel,
                 messages: chatMessages,
-                temperature: 0.5,
-                max_tokens: 3000
+                temperature: 1,
+                max_tokens: 4096
             })
         });
 

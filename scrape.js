@@ -149,22 +149,19 @@ async function scrapeLinkedIn(forceFullScrape = false) {
             console.log('🍪 Cookie handling error:', e.message); 
         }
 
-        // === SMART SCRAPE: Only check first page for new messages ===
+        // === SMART SCRAPE: Quick check for unread messages ===
         console.log('📜 Quick check: scanning visible conversations...');
         await page.waitForTimeout(3000);
 
-        // Get first page of conversations (no scrolling = fast)
-        const firstPageConvs = await page.$$('.msg-conversation-listitem');
-        console.log(`� Visible conversations: ${firstPageConvs.length}`);
-
-        // Quick check: extract timestamps from visible conversations to detect new messages
+        // Scan first page — unread conversations are always at the top on LinkedIn
         const visibleConvData = await page.evaluate(() => {
             const items = document.querySelectorAll('.msg-conversation-listitem');
-            return Array.from(items).map(item => {
+            return Array.from(items).map((item, idx) => {
                 const nameEl = item.querySelector('.msg-conversation-listitem__participant-names');
                 const timeEl = item.querySelector('.msg-conversation-listitem__time-stamp') || item.querySelector('time');
                 const unreadEl = item.querySelector('.msg-conversation-listitem__unread-count') || item.querySelector('.notification-badge');
                 return {
+                    index: idx,
                     name: nameEl?.textContent?.trim() || '',
                     time: timeEl?.textContent?.trim() || timeEl?.getAttribute('datetime') || '',
                     hasUnread: !!unreadEl || item.classList.contains('msg-conversation-listitem--unread')
@@ -172,27 +169,57 @@ async function scrapeLinkedIn(forceFullScrape = false) {
             });
         });
 
-        const unreadCount = visibleConvData.filter(c => c.hasUnread).length;
-        console.log(`📬 Unread conversations: ${unreadCount} / ${visibleConvData.length}`);
+        const unreadConvs = visibleConvData.filter(c => c.hasUnread);
+        const totalVisible = visibleConvData.length;
+        console.log(`� Visible: ${totalVisible} | �📬 Unread: ${unreadConvs.length}`);
 
-        // If no unread and DB already has data, skip full scrape
-        if (!forceFullScrape && unreadCount === 0 && dbCount > 0) {
-            console.log('✅ No new messages detected — skipping full scrape');
+        if (unreadConvs.length > 0) {
+            console.log('📬 Unread conversations:');
+            unreadConvs.forEach(c => console.log(`   → ${c.name} (${c.time})`));
+        }
+
+        // If no unread and DB already has data → nothing to do
+        if (!forceFullScrape && unreadConvs.length === 0 && dbCount > 0) {
+            console.log('✅ No new messages — nothing to scrape');
             await browser.close();
             return { scraped: 0, saved: 0, skipped: true, reason: 'no_new_messages' };
         }
 
-        // Only scrape conversations with unread messages (or all if first time / forced)
-        const shouldScrapeAll = forceFullScrape || dbCount === 0;
-        let maxConversations;
+        // === GET EXISTING TIMESTAMPS FROM DB to only fetch NEW messages ===
+        const { data: existingConvs } = await supabase
+            .from('conversations')
+            .select('id, linkedin_conversation_id, last_message_at, prospects(name, linkedin_url)')
+            .order('last_message_at', { ascending: false });
         
-        if (shouldScrapeAll) {
-            // First time or forced: scroll to load more (but cap at 100 to avoid timeout)
-            console.log('📜 Full scrape mode: loading more conversations...');
+        // Build lookup: linkedin_url → { conv_id, last_message_at }
+        const dbLookup = {};
+        (existingConvs || []).forEach(c => {
+            const url = c.linkedin_conversation_id || c.prospects?.linkedin_url;
+            if (url) {
+                dbLookup[url] = {
+                    conv_id: c.id,
+                    last_message_at: c.last_message_at ? new Date(c.last_message_at) : null
+                };
+            }
+            // Also index by name for fallback matching
+            if (c.prospects?.name) {
+                dbLookup[`name:${c.prospects.name.trim().toLowerCase()}`] = {
+                    conv_id: c.id,
+                    last_message_at: c.last_message_at ? new Date(c.last_message_at) : null
+                };
+            }
+        });
+
+        // === DETERMINE WHICH CONVERSATIONS TO SCRAPE ===
+        let indicesToScrape = [];
+        
+        if (forceFullScrape || dbCount === 0) {
+            // Full scrape: scroll to load more, then scrape all
+            console.log('📜 Full scrape mode: loading conversations...');
             let previousCount = 0;
-            let currentCount = firstPageConvs.length;
+            let currentCount = totalVisible;
             let scrollAttempts = 0;
-            const maxScrollAttempts = 15; // Cap at ~15 scrolls instead of 50
+            const maxScrollAttempts = 15;
 
             while (currentCount > previousCount && scrollAttempts < maxScrollAttempts) {
                 previousCount = currentCount;
@@ -201,27 +228,29 @@ async function scrapeLinkedIn(forceFullScrape = false) {
                     if (convList) convList.scrollTop = convList.scrollHeight;
                 });
                 await page.waitForTimeout(2000);
-                const convs = await page.$$('.msg-conversation-listitem');
-                currentCount = convs.length;
+                currentCount = (await page.$$('.msg-conversation-listitem')).length;
                 scrollAttempts++;
                 console.log(`📊 Loaded ${currentCount} conversations (scroll ${scrollAttempts}/${maxScrollAttempts})`);
             }
-            maxConversations = currentCount;
+            // Scrape all loaded conversations
+            for (let i = 0; i < currentCount; i++) indicesToScrape.push(i);
         } else {
-            // Smart mode: only scrape first page (unread messages are always at top)
-            maxConversations = Math.min(firstPageConvs.length, 40);
-            console.log(`⚡ Smart mode: checking top ${maxConversations} conversations for new messages`);
+            // Smart mode: ONLY scrape unread conversations
+            indicesToScrape = unreadConvs.map(c => c.index);
+            console.log(`⚡ Smart mode: scraping ONLY ${indicesToScrape.length} unread conversations`);
         }
 
-        const conversationElements = await page.$$('.msg-conversation-listitem');
-        const allData = [];
         const TEST_MODE = process.env.TEST_MODE === 'true';
-        if (TEST_MODE) maxConversations = 1;
+        if (TEST_MODE) indicesToScrape = indicesToScrape.slice(0, 1);
 
-        for (let i = 0; i < maxConversations; i++) {
+        const allData = [];
+
+        for (let idx = 0; idx < indicesToScrape.length; idx++) {
+            const i = indicesToScrape[idx];
             try {
                 // Click conversation
                 const convItems = await page.$$('.msg-conversation-listitem');
+                if (i >= convItems.length) continue;
                 await convItems[i].click();
                 await page.waitForTimeout(2000);
 
@@ -233,40 +262,29 @@ async function scrapeLinkedIn(forceFullScrape = false) {
                 const linkEl = await page.$('.msg-entity-lockup__entity-title a');
                 const prospectUrl = linkEl ? await linkEl.getAttribute('href') : '';
 
-                // Scrape LinkedIn profile for enrichment (skip by default to avoid timeouts)
-                let profileData = {
-                    job_title: null,
-                    company: null,
-                    location: null,
-                    sector: null
-                };
+                // Find last known timestamp for this conversation
+                const convKey = prospectUrl || `conv-${prospectName.trim()}`;
+                const nameKey = `name:${prospectName.trim().toLowerCase()}`;
+                const dbEntry = dbLookup[convKey] || dbLookup[nameKey];
+                const lastKnownMsgTime = dbEntry?.last_message_at || null;
 
+                // Profile enrichment (skip by default)
+                let profileData = { job_title: null, company: null, location: null, sector: null };
                 const ENRICH_PROFILES = process.env.ENRICH_PROFILES === 'true';
                 if (ENRICH_PROFILES && prospectUrl && prospectUrl.includes('linkedin.com')) {
                     try {
                         console.log(`   📋 Enriching profile: ${prospectName}...`);
                         await page.goto(prospectUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
                         await page.waitForTimeout(2000);
-
-                        // Get job title
                         const titleEl = await page.$('.text-body-medium.break-words');
                         if (titleEl) profileData.job_title = await titleEl.innerText();
-
-                        // Get company
                         const companyEl = await page.$('.inline-show-more-text--is-collapsed-with-line-clamp span[aria-hidden="true"]');
                         if (companyEl) profileData.company = await companyEl.innerText();
-
-                        // Get location
                         const locationEl = await page.$('.text-body-small.inline.t-black--light.break-words');
                         if (locationEl) profileData.location = await locationEl.innerText();
-
                         console.log(`   ✅ Profile enriched: ${profileData.job_title || 'N/A'} @ ${profileData.company || 'N/A'}`);
-
-                        // Go back to messages
                         await page.goto('https://www.linkedin.com/messaging/', { waitUntil: 'domcontentloaded', timeout: 30000 });
                         await page.waitForTimeout(2000);
-                        
-                        // Re-click conversation
                         const convItems2 = await page.$$('.msg-conversation-listitem');
                         await convItems2[i].click();
                         await page.waitForTimeout(2000);
@@ -275,56 +293,63 @@ async function scrapeLinkedIn(forceFullScrape = false) {
                     }
                 }
 
-                // Scroll to load all messages in conversation
-                await page.evaluate(() => {
-                    const msgList = document.querySelector('.msg-s-message-list-container');
-                    if (msgList) {
-                        msgList.scrollTop = 0; // Scroll to top to load older messages
-                    }
-                });
-                await page.waitForTimeout(2000);
+                // Get messages — only scroll if no DB entry (new conversation)
+                if (!dbEntry) {
+                    await page.evaluate(() => {
+                        const msgList = document.querySelector('.msg-s-message-list-container');
+                        if (msgList) msgList.scrollTop = 0;
+                    });
+                    await page.waitForTimeout(2000);
+                }
 
-                // Get messages
+                // Extract messages
                 const messageEls = await page.$$('.msg-s-event-listitem');
                 const messages = [];
+                let newMsgCount = 0;
 
                 for (const msgEl of messageEls) {
                     const isSelf = await msgEl.$('.msg-s-message-list__event--from-self');
                     const sender = isSelf ? 'me' : 'them';
-
                     const contentEl = await msgEl.$('.msg-s-event-listitem__body');
                     const content = contentEl ? await contentEl.innerText() : '';
-
                     const timeEl = await msgEl.$('time');
                     const timestamp = timeEl ? await timeEl.getAttribute('datetime') : new Date().toISOString();
 
-                    if (content.trim()) {
-                        messages.push({ sender, content: content.trim(), timestamp });
+                    if (!content.trim()) continue;
+
+                    // SMART FILTER: Only keep messages AFTER last known timestamp
+                    if (lastKnownMsgTime && timestamp) {
+                        const msgTime = new Date(timestamp);
+                        if (msgTime <= lastKnownMsgTime) continue; // Skip old messages
                     }
+
+                    messages.push({ sender, content: content.trim(), timestamp });
+                    newMsgCount++;
                 }
 
-                // Skip deduplication check for now (will be done during upload)
-                // const convId = prospectUrl || `conv-${prospectName.trim()}`;
-                // if (existingConvIds.has(convId)) {
-                //     console.log(`⏭️  Skipped ${i + 1}/${maxConversations}: ${prospectName} (already in database)`);
-                //     continue;
-                // }
+                // Skip if no new messages found
+                if (messages.length === 0 && dbEntry) {
+                    console.log(`⏭️  ${idx + 1}/${indicesToScrape.length}: ${prospectName} — no new messages`);
+                    continue;
+                }
 
                 allData.push({
                     prospect_name: prospectName.trim(),
                     prospect_url: prospectUrl,
                     messages,
-                    profile_data: profileData
+                    profile_data: profileData,
+                    is_update: !!dbEntry, // Flag: updating existing conversation
+                    existing_conv_id: dbEntry?.conv_id
                 });
 
-                console.log(`✅ Scraped ${i + 1}/${maxConversations}: ${prospectName} (${messages.length} messages)`);
+                console.log(`✅ ${idx + 1}/${indicesToScrape.length}: ${prospectName} — ${newMsgCount} NEW messages`);
 
             } catch (e) {
-                console.log(`⚠️ Error on conversation ${i + 1}:`, e.message);
+                console.log(`⚠️ Error on conversation ${idx + 1}:`, e.message);
             }
         }
 
-        console.log(`\n📊 Total conversations scraped: ${allData.length}`);
+        console.log(`\n📊 Conversations with new messages: ${allData.length}`);
 
         // Close browser
         await browser.close();
@@ -335,75 +360,85 @@ async function scrapeLinkedIn(forceFullScrape = false) {
         fs.writeFileSync(dataFile, JSON.stringify(allData, null, 2));
         console.log(`💾 Saved ${allData.length} conversations to ${dataFile}`);
 
-        // Upload to Supabase (wait a bit for network to stabilize after browser close)
-        console.log('⏳ Waiting for network to stabilize...');
-        await new Promise(resolve => setTimeout(resolve, 3000));
-        
-        console.log('📤 Uploading to Supabase...');
-        const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+        // Upload to Supabase
+        console.log('📤 Uploading new messages to Supabase...');
         let saved = 0;
+        let newMessages = 0;
 
         for (const conv of allData) {
             try {
-                // Insert prospect (ignore if exists)
-                const prospectData = {
-                    linkedin_url: conv.prospect_url || `https://linkedin.com/unknown/${conv.prospect_name.replace(/\s+/g, '-')}`,
-                    name: conv.prospect_name
-                };
-                // Add profile data if available
-                if (conv.profile_data) {
-                    if (conv.profile_data.job_title) prospectData.job_title = conv.profile_data.job_title;
-                    if (conv.profile_data.company) prospectData.company = conv.profile_data.company;
-                    if (conv.profile_data.location) prospectData.location = conv.profile_data.location;
-                    if (conv.profile_data.sector) prospectData.sector = conv.profile_data.sector;
+                let conversationId;
+
+                if (conv.is_update && conv.existing_conv_id) {
+                    // === EXISTING CONVERSATION: just add new messages ===
+                    conversationId = conv.existing_conv_id;
+                    
+                    // Update conversation metadata
+                    const lastMsg = conv.messages[conv.messages.length - 1];
+                    await supabase.from('conversations').update({
+                        last_message_by: lastMsg.sender,
+                        last_message_at: lastMsg.timestamp,
+                        updated_at: new Date().toISOString()
+                    }).eq('id', conversationId);
+
+                    console.log(`   📝 Updating existing conversation: ${conv.prospect_name}`);
+                } else {
+                    // === NEW CONVERSATION: create prospect + conversation ===
+                    const prospectData = {
+                        linkedin_url: conv.prospect_url || `https://linkedin.com/unknown/${conv.prospect_name.replace(/\s+/g, '-')}`,
+                        name: conv.prospect_name
+                    };
+                    if (conv.profile_data) {
+                        if (conv.profile_data.job_title) prospectData.job_title = conv.profile_data.job_title;
+                        if (conv.profile_data.company) prospectData.company = conv.profile_data.company;
+                        if (conv.profile_data.location) prospectData.location = conv.profile_data.location;
+                        if (conv.profile_data.sector) prospectData.sector = conv.profile_data.sector;
+                    }
+
+                    const { data: prospect, error: prospectError } = await supabase
+                        .from('prospects')
+                        .upsert(prospectData, { onConflict: 'linkedin_url', ignoreDuplicates: false })
+                        .select()
+                        .single();
+                    if (prospectError) throw prospectError;
+
+                    const { data: conversation, error: conversationError } = await supabase
+                        .from('conversations')
+                        .insert({
+                            prospect_id: prospect.id,
+                            linkedin_conversation_id: conv.prospect_url || `conv-${conv.prospect_name}`,
+                            last_message_by: conv.messages.length ? conv.messages[conv.messages.length - 1].sender : 'unknown',
+                            last_message_at: conv.messages.length ? conv.messages[conv.messages.length - 1].timestamp : new Date().toISOString()
+                        })
+                        .select()
+                        .single();
+                    if (conversationError) throw conversationError;
+
+                    conversationId = conversation.id;
+                    console.log(`   🆕 New conversation: ${conv.prospect_name}`);
                 }
 
-                const { data: prospect, error: prospectError } = await supabase
-                    .from('prospects')
-                    .upsert(prospectData, { onConflict: 'linkedin_url', ignoreDuplicates: false })
-                    .select()
-                    .single();
-
-                if (prospectError) throw prospectError;
-
-                // Insert conversation (will fail if duplicate due to unique constraint)
-                const { data: conversation, error: conversationError } = await supabase
-                    .from('conversations')
-                    .insert({
-                        prospect_id: prospect.id,
-                        linkedin_conversation_id: conv.prospect_url || `conv-${conv.prospect_name}`,
-                        last_message_by: conv.messages.length ? conv.messages[conv.messages.length - 1].sender : 'unknown',
-                        last_message_at: conv.messages.length ? conv.messages[conv.messages.length - 1].timestamp : new Date().toISOString()
-                    })
-                    .select()
-                    .single();
-
-                if (conversationError) throw conversationError;
-
-                // Insert messages (only new ones due to unique constraint)
+                // Insert ONLY new messages
                 for (const msg of conv.messages) {
-                    await supabase
+                    const { error: msgError } = await supabase
                         .from('messages')
                         .insert({
-                            conversation_id: conversation.id,
+                            conversation_id: conversationId,
                             sender: msg.sender,
                             content: msg.content,
                             timestamp: msg.timestamp || new Date().toISOString()
-                        })
-                        .select();
+                        });
+                    if (!msgError) newMessages++;
                 }
 
                 saved++;
-                if (saved % 10 === 0) {
-                    console.log(`💾 Saved ${saved}/${allData.length} conversations...`);
-                }
             } catch (e) {
                 console.log(`⚠️ Error saving ${conv.prospect_name}:`, e.message);
             }
         }
 
-        console.log(`🎉 Upload complete! Saved ${saved}/${allData.length} conversations`);
-        return { scraped: allData.length, saved };
+        console.log(`🎉 Done! ${saved} conversations updated, ${newMessages} new messages saved`);
+        return { scraped: allData.length, saved, newMessages, skipped: false };
 
     } catch (error) {
         console.error('❌ Fatal error:', error);

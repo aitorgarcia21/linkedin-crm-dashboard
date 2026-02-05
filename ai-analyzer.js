@@ -79,13 +79,15 @@ Réponds UNIQUEMENT avec le JSON, sans texte avant ou après.`;
                 messages: [
                     { role: 'user', content: prompt }
                 ],
-                temperature: 0.3,
-                max_tokens: 2000
+                temperature: 1,
+                max_tokens: 4096
             })
         });
 
         if (!response.ok) {
-            throw new Error(`Kimi API error: ${response.status} ${response.statusText}`);
+            const errBody = await response.text();
+            console.error(`❌ Kimi API ${response.status} response:`, errBody.slice(0, 500));
+            throw new Error(`Kimi API error: ${response.status} ${response.statusText} — ${errBody.slice(0, 200)}`);
         }
 
         const data = await response.json();
@@ -261,8 +263,8 @@ Réponds UNIQUEMENT avec le message, sans introduction ni conclusion.`;
                 messages: [
                     { role: 'user', content: prompt }
                 ],
-                temperature: 0.7,
-                max_tokens: 1500
+                temperature: 1,
+                max_tokens: 4096
             })
         });
 
