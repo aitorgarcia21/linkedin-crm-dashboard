@@ -545,13 +545,279 @@
                 transform: rotate(360deg);
             }
         }
+
+        /* Mobile menu button - hidden on desktop */
+        .mobile-menu-btn {
+            display: none;
+            position: fixed;
+            top: 12px;
+            left: 12px;
+            z-index: 1001;
+            background: #fff;
+            border: 1px solid #E5E7EB;
+            border-radius: 8px;
+            padding: 8px;
+            cursor: pointer;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .mobile-menu-btn svg {
+            width: 24px;
+            height: 24px;
+            color: #374151;
+        }
+
+        /* Sidebar overlay - hidden on desktop */
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.4);
+            z-index: 999;
+        }
+
+        /* Mobile back button - hidden on desktop */
+        .mobile-back-btn {
+            display: none;
+            align-items: center;
+            gap: 4px;
+            background: none;
+            border: none;
+            color: #3B82F6;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            padding: 4px 0;
+        }
+
+        .mobile-back-btn svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        /* ========== TABLET (<1024px) ========== */
+        @media (max-width: 1024px) {
+            .sidebar {
+                position: fixed;
+                left: -280px;
+                top: 0;
+                bottom: 0;
+                z-index: 1000;
+                width: 260px;
+                transition: left 0.3s ease;
+            }
+
+            .sidebar.open {
+                left: 0;
+            }
+
+            .sidebar-overlay.open {
+                display: block;
+            }
+
+            .mobile-menu-btn {
+                display: flex;
+            }
+
+            .header {
+                padding: 0 16px 0 56px;
+            }
+
+            .stats-row {
+                gap: 20px;
+            }
+
+            .stat-block h4 {
+                font-size: 10px;
+            }
+
+            .stat-block p {
+                font-size: 16px;
+            }
+
+            .conv-list {
+                width: 300px;
+            }
+        }
+
+        /* ========== MOBILE (<768px) ========== */
+        @media (max-width: 768px) {
+            body {
+                flex-direction: column;
+                overflow: auto;
+            }
+
+            .main {
+                flex: 1;
+                min-height: 0;
+                height: 100vh;
+                display: flex;
+                flex-direction: column;
+            }
+
+            .header {
+                height: auto;
+                min-height: 52px;
+                padding: 10px 12px 10px 52px;
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+
+            .stats-row {
+                gap: 16px;
+            }
+
+            .stat-block h4 {
+                font-size: 9px;
+            }
+
+            .stat-block p {
+                font-size: 14px;
+            }
+
+            .status-badge {
+                font-size: 11px;
+                padding: 4px 10px;
+            }
+
+            .content {
+                flex: 1;
+                flex-direction: column;
+                position: relative;
+            }
+
+            .conv-list {
+                width: 100%;
+                border-right: none;
+                flex: 1;
+            }
+
+            .conv-list.hidden-mobile {
+                display: none;
+            }
+
+            .msg-view {
+                display: none;
+                position: absolute;
+                inset: 0;
+                z-index: 10;
+                background: #fff;
+            }
+
+            .msg-view.active-mobile {
+                display: flex;
+            }
+
+            .msg-view.active-mobile .mobile-back-btn {
+                display: flex;
+            }
+
+            .msg-header {
+                height: auto;
+                min-height: 56px;
+                padding: 8px 12px;
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+
+            .msg-header-left {
+                gap: 10px;
+                flex: 1;
+                min-width: 0;
+            }
+
+            .msg-header-info h2 {
+                font-size: 14px;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+
+            .msg-actions {
+                gap: 6px;
+            }
+
+            .btn {
+                padding: 6px 12px;
+                font-size: 12px;
+            }
+
+            .msg-body {
+                padding: 12px;
+            }
+
+            .msg-bubble {
+                max-width: 85%;
+                padding: 10px 14px;
+                font-size: 14px;
+            }
+
+            .msg-input-area {
+                padding: 10px 12px;
+            }
+
+            .msg-textarea {
+                padding: 10px 44px 10px 12px;
+                font-size: 14px;
+            }
+
+            .search-box {
+                padding: 10px 12px;
+            }
+
+            .conv-item {
+                padding: 12px;
+            }
+
+            .mobile-menu-btn {
+                top: 10px;
+                left: 10px;
+            }
+        }
+
+        /* ========== SMALL MOBILE (<480px) ========== */
+        @media (max-width: 480px) {
+            .header {
+                padding: 8px 10px 8px 48px;
+            }
+
+            .stats-row {
+                gap: 12px;
+            }
+
+            .status-badge {
+                display: none;
+            }
+
+            .msg-actions {
+                width: 100%;
+                justify-content: flex-end;
+            }
+
+            .msg-header {
+                padding: 8px 10px;
+            }
+
+            .avatar {
+                width: 34px;
+                height: 34px;
+                font-size: 14px;
+            }
+        }
     </style>
 </head>
 
 <body>
 
+    <!-- Mobile hamburger button -->
+    <button class="mobile-menu-btn" id="menuBtn" aria-label="Menu">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+    </button>
+    <!-- Sidebar overlay for mobile -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
     <!-- Sidebar -->
-    <aside class="sidebar">
+    <aside class="sidebar" id="sidebar">
         <div>
             <div class="sidebar-header">
                 <div class="logo"><span class="logo-dot"></span> LINKIFG</div>
@@ -710,6 +976,7 @@
 
         async function select(id) {
             activeId = id;
+            showMobileMessages();
             const { data } = await db.from('conversations').select(`
                 id, prospects (name, linkedin_url), messages (content, sender, timestamp)
             `).eq('id', id).single();
@@ -723,6 +990,10 @@
             document.getElementById('msgView').innerHTML = `
                 <div class="msg-header">
                     <div class="msg-header-left">
+                        <button class="mobile-back-btn" onclick="showMobileConvList()">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+                            Retour
+                        </button>
                         <div class="avatar">${name.charAt(0)}</div>
                         <div class="msg-header-info">
                             <h2>${name}</h2>
@@ -778,6 +1049,59 @@
             this.innerHTML = '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:16px;height:16px"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg> Sync LinkedIn';
             setTimeout(load, 3000);
         };
+
+        // Mobile sidebar toggle
+        const menuBtn = document.getElementById('menuBtn');
+        const sidebar = document.getElementById('sidebar');
+        const sidebarOverlay = document.getElementById('sidebarOverlay');
+
+        function toggleSidebar() {
+            sidebar.classList.toggle('open');
+            sidebarOverlay.classList.toggle('open');
+        }
+
+        menuBtn.addEventListener('click', toggleSidebar);
+        sidebarOverlay.addEventListener('click', toggleSidebar);
+
+        // Close sidebar when nav item clicked on mobile
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', () => {
+                if (window.innerWidth <= 1024) {
+                    sidebar.classList.remove('open');
+                    sidebarOverlay.classList.remove('open');
+                }
+            });
+        });
+
+        // Mobile view switching
+        function isMobile() { return window.innerWidth <= 768; }
+
+        function showMobileMessages() {
+            if (!isMobile()) return;
+            const convList = document.querySelector('.conv-list');
+            const msgView = document.getElementById('msgView');
+            convList.classList.add('hidden-mobile');
+            msgView.classList.add('active-mobile');
+        }
+
+        function showMobileConvList() {
+            const convList = document.querySelector('.conv-list');
+            const msgView = document.getElementById('msgView');
+            convList.classList.remove('hidden-mobile');
+            msgView.classList.remove('active-mobile');
+        }
+
+        // Reset mobile classes on resize
+        window.addEventListener('resize', () => {
+            if (!isMobile()) {
+                document.querySelector('.conv-list').classList.remove('hidden-mobile');
+                document.getElementById('msgView').classList.remove('active-mobile');
+            }
+            if (window.innerWidth > 1024) {
+                sidebar.classList.remove('open');
+                sidebarOverlay.classList.remove('open');
+            }
+        });
 
         load();
         db.channel('changes').on('postgres_changes', { event: '*', schema: 'public', table: 'conversations' }, load).subscribe();
