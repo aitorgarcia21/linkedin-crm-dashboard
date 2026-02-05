@@ -762,12 +762,18 @@
             this.disabled = true;
             this.innerHTML = '<div class="spinner" style="width:16px;height:16px;border-width:2px;margin:0"></div> Sync...';
             try {
-                await fetch(`${SUPABASE_URL}/functions/v1/scrape-linkedin`, {
-                    method: 'POST',
-                    headers: { 'Authorization': `Bearer ${SUPABASE_KEY}` }
-                });
-                alert('Synchronisation lancée !');
-            } catch (e) { alert('Erreur'); }
+                const SCRAPER_URL = 'https://linkedin-crm-dashboard-production.up.railway.app';
+                const res = await fetch(`${SCRAPER_URL}/scrape`, { method: 'POST' });
+                const data = await res.json();
+                if (data.success) {
+                    alert(`Synchronisation réussie ! ${data.saved} conversations sauvegardées`);
+                } else {
+                    alert('Erreur: ' + data.error);
+                }
+            } catch (e) { 
+                alert('Erreur de connexion au scraper'); 
+                console.error(e);
+            }
             this.disabled = false;
             this.innerHTML = '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:16px;height:16px"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg> Sync LinkedIn';
             setTimeout(load, 3000);

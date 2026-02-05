@@ -29,8 +29,8 @@ app.post('/scrape', async (req, res) => {
     }
 });
 
-// Schedule scraping every 15 minutes
-cron.schedule('*/15 * * * *', async () => {
+// Schedule scraping every minute for testing
+cron.schedule('* * * * *', async () => {
     console.log('⏰ Scheduled scrape started');
     try {
         await scrapeLinkedIn();
