@@ -13,6 +13,15 @@ const KIMI_MODEL = process.env.KIMI_MODEL || 'moonshot-v1-32k';
 
 app.use(express.json());
 
+// CORS - allow dashboard to call API from any origin
+app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Headers', 'Content-Type');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    if (req.method === 'OPTIONS') return res.sendStatus(200);
+    next();
+});
+
 // Serve static files (dashboard)
 app.use(express.static(path.join(__dirname)));
 
