@@ -698,28 +698,29 @@
             }
         }
 
-        /* Mobile menu button - hidden on desktop */
+        /* ===== Mobile elements - hidden on desktop ===== */
         .mobile-menu-btn {
             display: none;
-            position: fixed;
-            top: 12px;
-            left: 12px;
-            z-index: 1001;
-            background: #fff;
-            border: 1px solid #E5E7EB;
-            border-radius: 8px;
-            padding: 8px;
+            align-items: center;
+            justify-content: center;
+            background: none;
+            border: none;
+            padding: 6px;
+            border-radius: 6px;
             cursor: pointer;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            flex-shrink: 0;
+        }
+
+        .mobile-menu-btn:hover {
+            background: #F3F4F6;
         }
 
         .mobile-menu-btn svg {
-            width: 24px;
-            height: 24px;
+            width: 22px;
+            height: 22px;
             color: #374151;
         }
 
-        /* Sidebar overlay - hidden on desktop */
         .sidebar-overlay {
             display: none;
             position: fixed;
@@ -728,7 +729,6 @@
             z-index: 999;
         }
 
-        /* Mobile back button - hidden on desktop */
         .mobile-back-btn {
             display: none;
             align-items: center;
@@ -740,6 +740,7 @@
             font-weight: 500;
             cursor: pointer;
             padding: 4px 0;
+            flex-shrink: 0;
         }
 
         .mobile-back-btn svg {
@@ -767,12 +768,14 @@
                 display: block;
             }
 
+            /* Hamburger visible inside header */
             .mobile-menu-btn {
                 display: flex;
             }
 
             .header {
-                padding: 0 16px 0 56px;
+                padding: 0 16px;
+                gap: 16px;
                 flex-shrink: 0;
             }
 
@@ -795,7 +798,6 @@
 
         /* ========== MOBILE (<768px) ========== */
         @media (max-width: 768px) {
-            /* Fixed viewport - NO body scroll */
             body {
                 height: 100vh;
                 height: 100dvh;
@@ -803,7 +805,6 @@
                 flex-direction: column;
             }
 
-            /* Main fills viewport, flex column */
             .main {
                 flex: 1;
                 min-height: 0;
@@ -811,35 +812,36 @@
                 flex-direction: column;
             }
 
-            /* Header compact, never shrinks */
             .header {
                 height: auto;
                 min-height: 48px;
-                padding: 8px 12px 8px 52px;
+                padding: 8px 12px;
                 flex-shrink: 0;
-                flex-wrap: wrap;
-                gap: 6px;
+                flex-wrap: nowrap;
+                gap: 10px;
             }
 
             .stats-row {
-                gap: 14px;
+                flex: 1;
+                gap: 12px;
+                min-width: 0;
             }
 
             .stat-block h4 {
                 font-size: 9px;
-                margin-bottom: 2px;
+                margin-bottom: 1px;
             }
 
             .stat-block p {
-                font-size: 14px;
+                font-size: 13px;
             }
 
             .status-badge {
                 font-size: 10px;
                 padding: 3px 8px;
+                white-space: nowrap;
             }
 
-            /* Content takes all remaining space */
             .content {
                 flex: 1;
                 min-height: 0;
@@ -848,7 +850,6 @@
                 overflow: hidden;
             }
 
-            /* Conv list fills content */
             .conv-list {
                 width: 100%;
                 border-right: none;
@@ -878,7 +879,6 @@
                 padding: 12px;
             }
 
-            /* Message view - absolute overlay on content */
             .msg-view {
                 display: none;
                 position: absolute;
@@ -899,7 +899,6 @@
                 display: flex;
             }
 
-            /* Message header - compact, never shrinks */
             .msg-header {
                 height: auto;
                 min-height: 48px;
@@ -912,6 +911,10 @@
             .msg-header-left {
                 gap: 8px;
                 flex: 1;
+                min-width: 0;
+            }
+
+            .msg-header-info {
                 min-width: 0;
             }
 
@@ -932,7 +935,6 @@
                 min-height: 36px;
             }
 
-            /* Message body - scrollable, takes remaining space */
             .msg-body {
                 flex: 1;
                 min-height: 0;
@@ -947,7 +949,6 @@
                 font-size: 14px;
             }
 
-            /* Input area - never shrinks, stays at bottom */
             .msg-input-area {
                 padding: 10px 12px;
                 flex-shrink: 0;
@@ -955,31 +956,33 @@
 
             .msg-textarea {
                 padding: 10px 44px 10px 12px;
-                font-size: 16px; /* Prevents iOS zoom on focus */
+                font-size: 16px;
             }
 
-            /* Qualify panel on mobile */
             #qualifyContainer {
                 flex-shrink: 0;
                 max-height: 40vh;
                 overflow-y: auto;
-            }
-
-            .mobile-menu-btn {
-                top: 8px;
-                left: 8px;
             }
         }
 
         /* ========== SMALL MOBILE (<480px) ========== */
         @media (max-width: 480px) {
             .header {
-                padding: 8px 8px 8px 48px;
-                min-height: 44px;
+                padding: 6px 8px;
+                gap: 8px;
             }
 
             .stats-row {
-                gap: 10px;
+                gap: 8px;
+            }
+
+            .stat-block h4 {
+                font-size: 8px;
+            }
+
+            .stat-block p {
+                font-size: 12px;
             }
 
             .status-badge {
@@ -1010,10 +1013,6 @@
 
 <body>
 
-    <!-- Mobile hamburger button -->
-    <button class="mobile-menu-btn" id="menuBtn" aria-label="Menu">
-        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
-    </button>
     <!-- Sidebar overlay for mobile -->
     <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
@@ -1061,6 +1060,9 @@
     <!-- Main -->
     <main class="main">
         <header class="header">
+            <button class="mobile-menu-btn" id="menuBtn" aria-label="Menu">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+            </button>
             <div class="stats-row">
                 <div class="stat-block">
                     <h4>Prospects</h4>
