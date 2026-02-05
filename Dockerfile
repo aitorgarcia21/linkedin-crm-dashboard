@@ -2,6 +2,7 @@ FROM node:20-slim
 
 # Install Playwright dependencies
 RUN apt-get update && apt-get install -y \
+    libglib2.0-0 \
     libnss3 \
     libnspr4 \
     libatk1.0-0 \
@@ -20,8 +21,13 @@ RUN apt-get update && apt-get install -y \
     libasound2 \
     libatspi2.0-0 \
     libxshmfence1 \
+    libx11-6 \
+    libx11-xcb1 \
+    libxcb1 \
+    libxext6 \
+    libxi6 \
+    libxtst6 \
     fonts-liberation \
-    libappindicator3-1 \
     xdg-utils \
     wget \
     ca-certificates \

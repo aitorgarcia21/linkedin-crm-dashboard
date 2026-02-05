@@ -185,7 +185,7 @@ async function scrapeLinkedIn() {
                 const linkEl = await page.$('.msg-entity-lockup__entity-title a');
                 const prospectUrl = linkEl ? await linkEl.getAttribute('href') : '';
 
-                // Scrape LinkedIn profile for enrichment
+                // Scrape LinkedIn profile for enrichment (skip by default to avoid timeouts)
                 let profileData = {
                     job_title: null,
                     company: null,
@@ -193,7 +193,8 @@ async function scrapeLinkedIn() {
                     sector: null
                 };
 
-                if (prospectUrl && prospectUrl.includes('linkedin.com')) {
+                const ENRICH_PROFILES = process.env.ENRICH_PROFILES === 'true';
+                if (ENRICH_PROFILES && prospectUrl && prospectUrl.includes('linkedin.com')) {
                     try {
                         console.log(`   📋 Enriching profile: ${prospectName}...`);
                         await page.goto(prospectUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
@@ -297,12 +298,21 @@ async function scrapeLinkedIn() {
         for (const conv of allData) {
             try {
                 // Insert prospect (ignore if exists)
+                const prospectData = {
+                    linkedin_url: conv.prospect_url || `https://linkedin.com/unknown/${conv.prospect_name.replace(/\s+/g, '-')}`,
+                    name: conv.prospect_name
+                };
+                // Add profile data if available
+                if (conv.profile_data) {
+                    if (conv.profile_data.job_title) prospectData.job_title = conv.profile_data.job_title;
+                    if (conv.profile_data.company) prospectData.company = conv.profile_data.company;
+                    if (conv.profile_data.location) prospectData.location = conv.profile_data.location;
+                    if (conv.profile_data.sector) prospectData.sector = conv.profile_data.sector;
+                }
+
                 const { data: prospect, error: prospectError } = await supabase
                     .from('prospects')
-                    .upsert({
-                        linkedin_url: conv.prospect_url || `https://linkedin.com/unknown/${conv.prospect_name.replace(/\s+/g, '-')}`,
-                        name: conv.prospect_name
-                    }, { onConflict: 'linkedin_url', ignoreDuplicates: false })
+                    .upsert(prospectData, { onConflict: 'linkedin_url', ignoreDuplicates: false })
                     .select()
                     .single();
 

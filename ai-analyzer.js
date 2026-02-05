@@ -1,5 +1,4 @@
 const fetch = require('node-fetch');
-const { SALES_FRAMEWORKS } = require('./sales-frameworks');
 
 const KIMI_API_KEY = process.env.KIMI_API_KEY || 'sk-VZwqHiJdkuPNkkV5CxNCyc81ZYDNg3WLlRPexmpVZFGB6kXW';
 const KIMI_BASE_URL = process.env.KIMI_BASE_URL || 'https://api.moonshot.cn/v1';

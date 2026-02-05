@@ -178,6 +178,60 @@ app.post('/api/follow-ups/:id/reject', async (req, res) => {
     }
 });
 
+// Analytics endpoints
+app.get('/api/analytics', async (req, res) => {
+    try {
+        const timeframe = req.query.timeframe || '30_days';
+        const result = await getSequenceAnalytics(timeframe);
+        res.json(result);
+    } catch (error) {
+        console.error('❌ Analytics error:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+app.get('/api/analytics/recommendations/:prospectId', async (req, res) => {
+    try {
+        const result = await getSequenceRecommendations(req.params.prospectId);
+        res.json(result);
+    } catch (error) {
+        console.error('❌ Recommendation error:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+app.post('/api/analytics/track', async (req, res) => {
+    try {
+        const { message_id, event, metadata } = req.body;
+        const result = await trackMessagePerformance(message_id, event, metadata);
+        res.json(result);
+    } catch (error) {
+        console.error('❌ Tracking error:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+app.post('/api/ab-tests', async (req, res) => {
+    try {
+        const { base_message_id, variants } = req.body;
+        const result = await createABTest(base_message_id, variants);
+        res.json(result);
+    } catch (error) {
+        console.error('❌ A/B test error:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+app.get('/api/ab-tests/:id/results', async (req, res) => {
+    try {
+        const result = await getABTestResults(req.params.id);
+        res.json(result);
+    } catch (error) {
+        console.error('❌ A/B test results error:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 // Cron disabled - scraper runs ONLY when clicking "Sync LinkedIn" button
 // Uncomment below to enable automatic scraping every 6 hours:
 // cron.schedule('0 */6 * * *', async () => {
