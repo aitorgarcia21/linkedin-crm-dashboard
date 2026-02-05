@@ -302,9 +302,9 @@
                 const msgs = (c.messages || []).sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp));
                 const lastMsg = msgs[0];
                 const now = Date.now();
-                const lastTime = lastMsg ? new Date(lastMsg.timestamp).getTime() : new Date(c.last_message_at || 0).getTime();
+                const lastTime = lastMsg ? new Date(lastMsg.timestamp).getTime() : (c.last_message_at ? new Date(c.last_message_at).getTime() : now);
                 const days = Math.round((now - lastTime) / 86400000);
-                const needsReply = c.last_message_by === 'them' || (lastMsg && lastMsg.sender !== 'me');
+                const needsReply = msgs.length > 0 && (c.last_message_by === 'them' || (lastMsg && lastMsg.sender !== 'me'));
 
                 stages[stage].items.push({
                     id: c.id, name: p.name, company: p.company, job_title: p.job_title,
@@ -327,9 +327,10 @@
 
                 const msgs = (c.messages || []).sort((x,y) => new Date(y.timestamp) - new Date(x.timestamp));
                 const lastMsg = msgs[0];
-                const lastTime = lastMsg ? new Date(lastMsg.timestamp).getTime() : 0;
+                if (!lastMsg) return; // No messages → skip daily list
+                const lastTime = new Date(lastMsg.timestamp).getTime();
                 const days = Math.round((Date.now() - lastTime) / 86400000);
-                const lastBy = lastMsg?.sender || c.last_message_by;
+                const lastBy = lastMsg.sender || c.last_message_by;
                 const needsReply = lastBy === 'them';
 
                 let reason = '';
@@ -403,12 +404,13 @@
                 }
                 stage.items.forEach(item => {
                     const sc = item.score >= 70 ? 'high' : item.score >= 40 ? 'med' : 'low';
-                    const timeColor = item.days > 7 ? '#DC2626' : item.days > 3 ? '#F59E0B' : '#9CA3AF';
+                    const daysLabel = item.days === 0 ? "Auj" : item.days > 1000 ? '—' : item.days+'j';
+                    const timeColor = item.days > 1000 ? '#9CA3AF' : item.days > 7 ? '#DC2626' : item.days > 3 ? '#F59E0B' : '#9CA3AF';
                     html += `<div class="p-card${item.id === activeConvId ? ' active' : ''}" onclick="openDetail('${item.id}')">
                         <div class="p-card-name">${item.name}</div>
                         <div class="p-card-title">${item.job_title || ''}${item.company ? ' @ '+item.company : ''}</div>
                         <div class="p-card-footer">
-                            <span class="p-card-time" style="color:${timeColor}">${item.days === 0 ? "Auj" : item.days+'j'}</span>
+                            <span class="p-card-time" style="color:${timeColor}">${daysLabel}</span>
                             <span class="p-card-score ${sc}">${item.score}/100</span>
                         </div>
                         ${item.needsReply ? '<span class="p-card-reply">⚡ À répondre</span>' : ''}
