@@ -13,6 +13,7 @@ const COOKIES_JSON = process.env.COOKIES_JSON; // Railway env var
 
 const LINKEDIN_EMAIL = process.env.LINKEDIN_EMAIL || 'aitorgarcia2112@gmail.com';
 const LINKEDIN_PASSWORD = process.env.LINKEDIN_PASSWORD || '21AiPa01....';
+const LINKEDIN_LI_AT = process.env.LINKEDIN_LI_AT || ''; // Session cookie to bypass login
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://igyxcobujacampiqndpf.supabase.co';
 const SUPABASE_KEY = process.env.SUPABASE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlneXhjb2J1amFjYW1waXFuZHBmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk5NDYxMTUsImV4cCI6MjA4NTUyMjExNX0.8jgz6G0Irj6sRclcBKzYE5VzzXNrxzHgrAz45tHfHpc';
@@ -61,54 +62,60 @@ async function scrapeLinkedIn(forceFullScrape = false) {
     }
 
     try {
-        // Simple login with credentials (no cookies)
-        console.log('🔐 Logging into LinkedIn...');
-        await page.goto('https://www.linkedin.com/login', { waitUntil: 'load', timeout: 60000 });
-        await page.waitForTimeout(3000);
-        
-        // Fill credentials
-        console.log('📝 Entering credentials...');
-        await page.fill('input#username', LINKEDIN_EMAIL);
-        await page.fill('input#password', LINKEDIN_PASSWORD);
-        await page.click('button[type="submit"]');
-        
-        // Wait for navigation — handle various post-login redirects
-        console.log('⏳ Waiting for login...');
-        try {
-            await page.waitForURL('**/feed/**', { timeout: 30000 });
-            console.log('✅ Logged in!');
-        } catch (loginErr) {
-            const currentUrl = page.url();
-            console.log(`⚠️ Login redirect to: ${currentUrl}`);
+        // === LOGIN: prefer li_at cookie, fallback to credentials ===
+        if (LINKEDIN_LI_AT) {
+            console.log('🍪 Using li_at session cookie (no login needed)...');
+            await context.addCookies([{
+                name: 'li_at',
+                value: LINKEDIN_LI_AT,
+                domain: '.linkedin.com',
+                path: '/',
+                httpOnly: true,
+                secure: true,
+                sameSite: 'None'
+            }]);
+            console.log('✅ Session cookie set!');
+        } else {
+            console.log('🔐 Logging into LinkedIn with credentials...');
+            await page.goto('https://www.linkedin.com/login', { waitUntil: 'load', timeout: 60000 });
+            await page.waitForTimeout(3000);
             
-            // Handle checkpoint/verification page
-            if (currentUrl.includes('checkpoint') || currentUrl.includes('challenge')) {
-                console.log('🔒 LinkedIn security checkpoint detected — trying to proceed...');
-                // Try clicking any "continue" or "verify" buttons
-                const verifyBtns = ['button[type="submit"]', 'button:has-text("Verify")', 'button:has-text("Continue")', 'button:has-text("Continuer")', '#email-pin-submit-button'];
-                for (const sel of verifyBtns) {
-                    const btn = await page.$(sel);
-                    if (btn) { await btn.click(); await page.waitForTimeout(3000); break; }
+            console.log('📝 Entering credentials...');
+            await page.fill('input#username', LINKEDIN_EMAIL);
+            await page.fill('input#password', LINKEDIN_PASSWORD);
+            await page.click('button[type="submit"]');
+            
+            console.log('⏳ Waiting for login...');
+            try {
+                await page.waitForURL('**/feed/**', { timeout: 30000 });
+                console.log('✅ Logged in!');
+            } catch (loginErr) {
+                const currentUrl = page.url();
+                console.log(`⚠️ Login redirect to: ${currentUrl}`);
+                
+                if (currentUrl.includes('checkpoint') || currentUrl.includes('challenge')) {
+                    console.log('🔒 LinkedIn security checkpoint detected — trying to proceed...');
+                    const verifyBtns = ['button[type="submit"]', 'button:has-text("Verify")', 'button:has-text("Continue")', 'button:has-text("Continuer")', '#email-pin-submit-button'];
+                    for (const sel of verifyBtns) {
+                        const btn = await page.$(sel);
+                        if (btn) { await btn.click({ force: true }); await page.waitForTimeout(3000); break; }
+                    }
+                    try {
+                        await page.waitForURL('**/feed/**', { timeout: 30000 });
+                        console.log('✅ Logged in after checkpoint!');
+                    } catch (e2) {
+                        console.log('⚠️ Still not on feed, trying direct messaging access...');
+                    }
                 }
-                // Wait again for feed
-                try {
-                    await page.waitForURL('**/feed/**', { timeout: 30000 });
-                    console.log('✅ Logged in after checkpoint!');
-                } catch (e2) {
-                    // Last resort: try going directly to messaging
-                    console.log('⚠️ Still not on feed, trying direct messaging access...');
+                else if (currentUrl.includes('messaging') || currentUrl.includes('feed')) {
+                    console.log('✅ Already logged in!');
                 }
-            }
-            // If already on messaging or feed, that's fine
-            else if (currentUrl.includes('messaging') || currentUrl.includes('feed')) {
-                console.log('✅ Already logged in!');
-            }
-            // If on login page still, credentials may be wrong
-            else if (currentUrl.includes('login')) {
-                throw new Error('LinkedIn login failed — check credentials');
-            }
-            else {
-                console.log('⚠️ Unknown redirect, trying to continue anyway...');
+                else if (currentUrl.includes('login')) {
+                    throw new Error('LinkedIn login failed — check credentials. Consider setting LINKEDIN_LI_AT env var with your li_at cookie.');
+                }
+                else {
+                    console.log('⚠️ Unknown redirect, trying to continue anyway...');
+                }
             }
         }
 
@@ -150,7 +157,7 @@ async function scrapeLinkedIn(forceFullScrape = false) {
                 const btn = await page.$(selector);
                 if (btn) {
                     console.log(`🍪 Clicking cookie button: ${selector}`);
-                    await btn.click();
+                    await btn.click({ force: true });
                     await page.waitForTimeout(1500);
                     break;
                 }
@@ -213,11 +220,25 @@ async function scrapeLinkedIn(forceFullScrape = false) {
             unreadConvs.forEach(c => console.log(`   → ${c.name} (${c.time})`));
         }
 
-        // If no unread and DB already has data → nothing to do
+        // If no unread and DB already has data → nothing to do (unless force)
         if (!forceFullScrape && unreadConvs.length === 0 && dbCount > 0) {
             console.log('✅ No new messages — nothing to scrape');
             await browser.close();
             return { scraped: 0, saved: 0, skipped: true, reason: 'no_new_messages' };
+        }
+
+        // Force scrape but 0 visible? Wait and reload messaging page
+        if (forceFullScrape && totalVisible === 0) {
+            console.log('⚠️ Force scrape but 0 visible — reloading messaging...');
+            await page.goto('https://www.linkedin.com/messaging/', { waitUntil: 'domcontentloaded', timeout: 60000 });
+            await page.waitForTimeout(5000);
+            const retryVisible = (await page.$$('.msg-conversation-listitem')).length;
+            console.log(`📊 After reload: ${retryVisible} visible`);
+            if (retryVisible === 0) {
+                console.log('❌ Still 0 conversations visible — login likely failed');
+                await browser.close();
+                return { scraped: 0, saved: 0, skipped: true, reason: 'login_failed_no_conversations' };
+            }
         }
 
         // === GET EXISTING TIMESTAMPS FROM DB to only fetch NEW messages ===
