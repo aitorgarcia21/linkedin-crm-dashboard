@@ -1,5 +1,6 @@
 const express = require('express');
 const cron = require('node-cron');
+const path = require('path');
 const { scrapeLinkedIn } = require('./scrape');
 
 const app = express();
@@ -7,8 +8,11 @@ const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
 
-// Health check
-app.get('/', (req, res) => {
+// Serve static files (dashboard)
+app.use(express.static(path.join(__dirname)));
+
+// Health check - moved to /api/status so index.html is served at /
+app.get('/api/status', (req, res) => {
     res.json({ status: 'ok', service: 'LinkedIn Scraper', lastRun: global.lastRun || 'never' });
 });
 

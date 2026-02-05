@@ -16,15 +16,27 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 async function scrapeLinkedIn() {
     console.log('🔌 Connecting to Bright Data Scraping Browser...');
 
-    const browser = await chromium.connectOverCDP(SBR_WS_ENDPOINT);
+    // Add country parameter for US IP
+    const wsEndpoint = `${SBR_WS_ENDPOINT}?country=us`;
+    const browser = await chromium.connectOverCDP(wsEndpoint);
 
-    // Create new context and page (Bright Data doesn't provide existing ones)
-    const context = await browser.newContext();
+    // Create context with US locale and timezone
+    const context = await browser.newContext({
+        locale: 'en-US',
+        timezoneId: 'America/New_York',
+        extraHTTPHeaders: {
+            'Accept-Language': 'en-US,en;q=0.9'
+        }
+    });
     const page = await context.newPage();
 
     try {
         console.log('🔐 Logging into LinkedIn...');
-        await page.goto('https://www.linkedin.com/login', { waitUntil: 'domcontentloaded', timeout: 60000 });
+        // Force www.linkedin.com with explicit locale
+        await page.goto('https://www.linkedin.com/login?trk=guest_homepage-basic_nav-header-signin', {
+            waitUntil: 'domcontentloaded',
+            timeout: 60000
+        });
 
         // Wait for page to fully load
         await page.waitForTimeout(5000);
