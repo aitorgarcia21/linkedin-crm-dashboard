@@ -160,6 +160,28 @@
 
         .empty-col { text-align:center; padding:20px; color:#9CA3AF; font-size:12px; }
 
+        /* Daily contact banner */
+        .daily-banner { background:linear-gradient(135deg,#FEF3C7,#FDE68A); border-bottom:1px solid #F59E0B; padding:12px 24px; }
+        .daily-banner h3 { font-size:14px; font-weight:700; color:#92400E; margin-bottom:8px; }
+        .daily-list { display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; }
+        .daily-card { flex-shrink:0; background:#fff; border:1px solid #F59E0B; border-radius:10px; padding:10px 14px; min-width:200px; cursor:pointer; transition:all 0.15s; }
+        .daily-card:hover { box-shadow:0 2px 12px rgba(245,158,11,0.3); transform:translateY(-1px); }
+        .daily-card .dc-name { font-size:13px; font-weight:700; color:#1F2937; }
+        .daily-card .dc-title { font-size:11px; color:#6B7280; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:180px; }
+        .daily-card .dc-meta { display:flex; gap:8px; align-items:center; margin-top:6px; }
+        .daily-card .dc-badge { font-size:10px; font-weight:700; padding:2px 6px; border-radius:4px; }
+        .daily-card .dc-badge.urgent { background:#FEE2E2; color:#991B1B; }
+        .daily-card .dc-badge.soon { background:#FEF3C7; color:#92400E; }
+        .daily-card .dc-badge.reply { background:#DBEAFE; color:#1E40AF; }
+        .daily-card .dc-reason { font-size:10px; color:#92400E; margin-top:4px; font-style:italic; }
+
+        /* Schedule modal */
+        .schedule-row { display:flex; gap:8px; align-items:center; margin-top:8px; }
+        .schedule-row input[type="datetime-local"] { border:1px solid #BFDBFE; border-radius:6px; padding:6px 10px; font-size:12px; font-family:inherit; }
+        .schedule-row .btn-schedule { background:#F59E0B; color:#fff; font-size:11px; padding:6px 12px; border-radius:6px; border:none; cursor:pointer; font-weight:600; }
+        .schedule-row .btn-schedule:hover { background:#D97706; }
+        .scheduled-badge { display:inline-block; background:#FEF3C7; color:#92400E; font-size:10px; font-weight:700; padding:3px 8px; border-radius:6px; margin-top:6px; }
+
         @media (max-width:768px) {
             .detail-panel.open { position:fixed; top:0; left:0; right:0; bottom:0; width:100%; z-index:100; }
             .kanban { flex-direction:column; }
@@ -204,8 +226,13 @@
             <div class="stats" id="pipelineStats"></div>
             <div class="pipeline-actions">
                 <button class="btn btn-primary" id="analyzeBtn">🤖 Analyser</button>
+                <button class="btn btn-outline" id="syncConvertedBtn">✅ Sync Convertis</button>
                 <button class="btn btn-outline" id="syncBtn">🔄 Sync</button>
             </div>
+        </div>
+        <div class="daily-banner" id="dailyBanner" style="display:none">
+            <h3>📋 À contacter aujourd'hui <span id="dailyCount" style="font-weight:400;font-size:12px"></span></h3>
+            <div class="daily-list" id="dailyList"></div>
         </div>
         <div class="kanban" id="kanban">
             <div style="display:flex;align-items:center;justify-content:center;width:100%;padding:40px">
@@ -289,6 +316,71 @@
             // Sort each stage by score desc
             Object.values(stages).forEach(s => s.items.sort((a,b) => b.score - a.score));
 
+            // === DAILY CONTACT LIST ===
+            const dailyContacts = [];
+            allConvs.forEach(c => {
+                const a = Array.isArray(c.ai_analysis) ? c.ai_analysis[0] : c.ai_analysis;
+                const p = c.prospects;
+                if (!p || !a) return;
+                if (a.recommended_action === 'ignore' || c.engagement_level === 'irrelevant') return;
+                if (c.engagement_level === 'lost' || c.status === 'archived') return;
+
+                const msgs = (c.messages || []).sort((x,y) => new Date(y.timestamp) - new Date(x.timestamp));
+                const lastMsg = msgs[0];
+                const lastTime = lastMsg ? new Date(lastMsg.timestamp).getTime() : 0;
+                const days = Math.round((Date.now() - lastTime) / 86400000);
+                const lastBy = lastMsg?.sender || c.last_message_by;
+                const needsReply = lastBy === 'them';
+
+                let reason = '';
+                let priority = 0;
+
+                // They replied → we MUST respond
+                if (needsReply) {
+                    reason = '⚡ Ils ont répondu — à vous !';
+                    priority = 100 + (a.lead_score || 0);
+                }
+                // Follow-up timing matches
+                else if (a.recommended_action === 'follow_up') {
+                    const timingDays = { immediate:0, '2_days':2, '3_days':3, '5_days':5, '7_days':7, '10_days':10, '14_days':14 };
+                    const targetDays = timingDays[a.follow_up_timing] ?? 7;
+                    if (days >= targetDays) {
+                        reason = `🔔 Relance prévue (${days}j depuis dernier msg)`;
+                        priority = 50 + (a.lead_score || 0);
+                    }
+                }
+
+                if (reason) {
+                    dailyContacts.push({
+                        id: c.id, name: p.name, job_title: p.job_title, company: p.company,
+                        score: a.lead_score || 0, status: a.lead_status || 'cold',
+                        days, needsReply, reason, priority
+                    });
+                }
+            });
+
+            dailyContacts.sort((a,b) => b.priority - a.priority);
+            const banner = document.getElementById('dailyBanner');
+            const dailyList = document.getElementById('dailyList');
+
+            if (dailyContacts.length > 0) {
+                banner.style.display = 'block';
+                document.getElementById('dailyCount').textContent = `— ${dailyContacts.length} personne(s)`;
+                dailyList.innerHTML = dailyContacts.slice(0, 15).map(dc => `
+                    <div class="daily-card" onclick="openDetail('${dc.id}')">
+                        <div class="dc-name">${dc.name}</div>
+                        <div class="dc-title">${dc.job_title || ''}${dc.company ? ' @ '+dc.company : ''}</div>
+                        <div class="dc-meta">
+                            <span class="dc-badge ${dc.needsReply ? 'reply' : dc.score >= 70 ? 'urgent' : 'soon'}">${dc.score}/100</span>
+                            <span style="font-size:10px;color:#92400E">${dc.days}j</span>
+                        </div>
+                        <div class="dc-reason">${dc.reason}</div>
+                    </div>
+                `).join('');
+            } else {
+                banner.style.display = 'none';
+            }
+
             // Stats
             const total = Object.values(stages).reduce((s,st) => s + st.items.length, 0);
             document.getElementById('pipelineStats').innerHTML = 
@@ -297,6 +389,7 @@
                 `<span class="stat-pill" style="background:#DBEAFE;color:#1E40AF">❄️ ${stages.cold.items.length}</span>` +
                 `<span class="stat-pill" style="background:#ECFDF5;color:#065F46">✅ ${stages.converted.items.length}</span>` +
                 `<span class="stat-pill" style="background:#F5F3FF;color:#5B21B6">💎 ${stages.subscriber.items.length}</span>` +
+                `<span class="stat-pill" style="background:#FEF3C7;color:#92400E">📋 ${dailyContacts.length} à contacter</span>` +
                 `<span class="stat-pill" style="background:#F3F4F6;color:#6B7280">${total} total</span>`;
 
             // Render kanban
@@ -381,17 +474,27 @@
             });
             document.getElementById('moveBtns').innerHTML = movesHtml;
 
-            // Kimi area
-            const kimiMsg = followUp?.generated_message || '';
+            // Reply area
+            const replyMsg = followUp?.generated_message || '';
+            // Default schedule: tomorrow 9am
+            const tomorrow9 = new Date(); tomorrow9.setDate(tomorrow9.getDate()+1); tomorrow9.setHours(9,0,0,0);
+            const schedDefault = tomorrow9.toISOString().slice(0,16);
+
             document.getElementById('kimiArea').innerHTML = `
                 <div class="kimi-area">
                     <h4>🤖 Réponse LINKIFG</h4>
-                    <textarea id="kimiTextarea">${kimiMsg}</textarea>
+                    <textarea id="replyTextarea">${replyMsg}</textarea>
                     <div class="kimi-actions">
                         <button class="btn btn-primary" onclick="generateReply()" style="font-size:12px;padding:6px 12px">🤖 Générer</button>
+                        <button class="btn btn-outline" onclick="generateReply()" style="font-size:12px;padding:6px 12px">🔄 Regénérer</button>
                         <button class="btn btn-outline" onclick="copyReply()" style="font-size:12px;padding:6px 12px">📋 Copier</button>
                         <a class="btn btn-outline" href="${p.linkedin_url || '#'}" target="_blank" style="font-size:12px;padding:6px 12px;text-decoration:none;display:inline-block">🔗 LinkedIn</a>
                     </div>
+                    <div class="schedule-row">
+                        <input type="datetime-local" id="scheduleTime" value="${schedDefault}" />
+                        <button class="btn-schedule" onclick="scheduleMessage()">📅 Programmer l'envoi</button>
+                    </div>
+                    <div id="scheduleStatus"></div>
                 </div>`;
         }
 
@@ -466,7 +569,7 @@
         async function generateReply() {
             const d = window._detail;
             if (!d) return;
-            const textarea = document.getElementById('kimiTextarea');
+            const textarea = document.getElementById('replyTextarea');
             textarea.value = '⏳ Génération en cours...';
 
             try {
@@ -481,12 +584,42 @@
         }
 
         async function copyReply() {
-            const textarea = document.getElementById('kimiTextarea');
+            const textarea = document.getElementById('replyTextarea');
             if (!textarea?.value) return;
             await navigator.clipboard.writeText(textarea.value);
             const btn = event.target;
             btn.textContent = '✅ Copié !';
             setTimeout(() => btn.textContent = '📋 Copier', 1500);
+        }
+
+        async function scheduleMessage() {
+            const d = window._detail;
+            if (!d) return;
+            const textarea = document.getElementById('replyTextarea');
+            const msg = textarea?.value?.trim();
+            if (!msg || msg.startsWith('⏳') || msg.startsWith('❌')) {
+                alert('Génère d\'abord un message avant de programmer.');
+                return;
+            }
+            const schedTime = document.getElementById('scheduleTime').value;
+            if (!schedTime) { alert('Choisis une date/heure.'); return; }
+
+            const statusEl = document.getElementById('scheduleStatus');
+            statusEl.innerHTML = '<span style="font-size:11px;color:#92400E">⏳ Programmation...</span>';
+
+            try {
+                const { error } = await db.from('scheduled_messages').insert({
+                    conversation_id: d.convId,
+                    message: msg,
+                    scheduled_at: new Date(schedTime).toISOString(),
+                    status: 'scheduled'
+                });
+                if (error) throw error;
+                const dt = new Date(schedTime);
+                statusEl.innerHTML = `<span class="scheduled-badge">📅 Programmé pour ${dt.toLocaleDateString('fr-FR')} à ${dt.toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'})}</span>`;
+            } catch(e) {
+                statusEl.innerHTML = `<span style="font-size:11px;color:#DC2626">❌ ${e.message}</span>`;
+            }
         }
 
         // ===== SYNC =====
@@ -576,8 +709,31 @@
             finally { document.getElementById('chatbotSend').disabled = false; document.getElementById('chatbotInput').focus(); }
         }
 
-        // Init
-        loadPipeline();
+        // Sync Converted button
+        document.getElementById('syncConvertedBtn').addEventListener('click', async function() {
+            this.disabled = true; this.textContent = '⏳ Sync...';
+            try {
+                const res = await fetch(`${API_URL}/api/sync-converted`, { method:'POST' });
+                const data = await res.json();
+                if (data.success) {
+                    this.textContent = `✅ ${data.matched} trouvé(s)`;
+                    setTimeout(() => { this.textContent = '✅ Sync Convertis'; this.disabled = false; }, 2000);
+                    loadPipeline();
+                } else throw new Error(data.error);
+            } catch(e) { alert('Erreur: ' + e.message); this.disabled = false; this.textContent = '✅ Sync Convertis'; }
+        });
+
+        // Init — auto sync converted on load
+        async function init() {
+            loadPipeline();
+            // Auto sync converted in background
+            try {
+                const res = await fetch(`${API_URL}/api/sync-converted`, { method:'POST' });
+                const data = await res.json();
+                if (data.matched > 0) loadPipeline();
+            } catch(e) {}
+        }
+        init();
         db.channel('changes').on('postgres_changes', { event:'*', schema:'public', table:'conversations' }, loadPipeline).subscribe();
     </script>
 </body>

@@ -135,6 +135,77 @@ Critères :
     }
 });
 
+// Sync converted: cross-reference IFG product users with LinkedIn prospects
+app.post('/api/sync-converted', async (req, res) => {
+    try {
+        const supabaseUrl = process.env.SUPABASE_URL || 'https://igyxcobujacampiqndpf.supabase.co';
+        const supabaseKey = process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_KEY;
+        const supabase = createClient(supabaseUrl, supabaseKey);
+
+        const ifgUrl = process.env.IFG_SUPABASE_URL || 'https://cgfygltnpopoayfoplyv.supabase.co';
+        const ifgKey = process.env.IFG_SUPABASE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNnZnlnbHRucG9wb2F5Zm9wbHl2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkxODY5NjQsImV4cCI6MjA3NDc2Mjk2NH0.0QQi7wWLzoph-oHUrapzxkYspAP7VXfgedUxjV-A4Vo';
+        const ifgDb = createClient(ifgUrl, ifgKey);
+
+        // Get IFG product users (emails)
+        const { data: ifgUsers } = await ifgDb.from('profiles').select('email');
+        if (!ifgUsers?.length) return res.json({ success: true, matched: 0 });
+
+        // Extract name parts from emails: "alban.plande@gmail.com" → ["alban", "plande"]
+        const ifgNames = ifgUsers.map(u => {
+            const username = u.email.split('@')[0].toLowerCase();
+            return username.replace(/[0-9_.]/g, ' ').split(/\s+/).filter(p => p.length >= 3);
+        }).filter(parts => parts.length > 0);
+
+        // Get all prospects from pipeline
+        const { data: prospects } = await supabase.from('prospects').select('id, name');
+        if (!prospects?.length) return res.json({ success: true, matched: 0 });
+
+        // Match: if ANY IFG email name parts match prospect name parts
+        let matched = 0;
+        for (const prospect of prospects) {
+            if (!prospect.name) continue;
+            const pNameParts = prospect.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').split(/\s+/);
+
+            const isMatch = ifgNames.some(emailParts => {
+                // At least 2 parts match, OR 1 long part (>=5 chars) matches
+                const matches = emailParts.filter(ep => 
+                    pNameParts.some(pp => pp.includes(ep) || ep.includes(pp))
+                );
+                return matches.length >= 2 || matches.some(m => m.length >= 5);
+            });
+
+            if (isMatch) {
+                // Mark conversation as converted
+                const { data: conv } = await supabase.from('conversations')
+                    .select('id, engagement_level')
+                    .eq('prospect_id', prospect.id)
+                    .single();
+
+                if (conv && conv.engagement_level !== 'converted' && conv.engagement_level !== 'subscriber') {
+                    await supabase.from('conversations').update({
+                        engagement_level: 'converted',
+                        status: 'converted'
+                    }).eq('id', conv.id);
+
+                    // Also update ai_analysis has_tested_ifg
+                    await supabase.from('ai_analysis').update({
+                        has_tested_ifg: true
+                    }).eq('conversation_id', conv.id);
+
+                    console.log(`✅ Matched: ${prospect.name} → converted`);
+                    matched++;
+                }
+            }
+        }
+
+        console.log(`🔄 Sync converted: ${matched} new matches`);
+        res.json({ success: true, matched });
+    } catch (error) {
+        console.error('Sync converted error:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 // Generate a follow-up message for a conversation (called from dashboard detail panel)
 app.post('/api/generate-message', async (req, res) => {
     const { prospect_name, conversation } = req.body;
@@ -466,7 +537,7 @@ app.post('/api/linkifg-chat', async (req, res) => {
             ifgDb.from('conversations').select('id, user_id, title, country, status, created_at').order('created_at', { ascending: false }).limit(50),
             ifgDb.from('messages').select('id', { count: 'exact', head: true }),
             ifgDb.from('user_quotas').select('user_id, requests_count, tokens_used, requests_simple, requests_complex, last_request_at').order('last_request_at', { ascending: false }).limit(20),
-            ifgDb.from('subscriptions').select('id, user_id, plan_type, status, current_period_start, current_period_end, cancel_at_period_end').catch(() => ({ data: [] }))
+            ifgDb.from('subscriptions').select('id, user_id, plan_type, status, current_period_start, current_period_end, cancel_at_period_end')
         ]);
 
         const analyses = analysesRes.data || [];
@@ -824,8 +895,16 @@ app.post('/auto-sync', async (req, res) => {
     }
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
     console.log(`🔥 Scraper service running on port ${PORT}`);
     console.log('📅 Auto-sync scheduled: every hour');
     console.log('🔥 Hot leads list available at /api/hot-leads');
+
+    // Auto sync converted on startup
+    try {
+        const fetch = require('node-fetch');
+        const res = await fetch(`http://localhost:${PORT}/api/sync-converted`, { method: 'POST' });
+        const data = await res.json();
+        console.log(`🔄 Auto sync converted: ${data.matched} matches`);
+    } catch(e) { console.log('⚠️ Sync converted skipped:', e.message); }
 });
