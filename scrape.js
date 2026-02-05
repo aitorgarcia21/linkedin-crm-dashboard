@@ -20,44 +20,52 @@ async function scrapeLinkedIn() {
     const wsEndpoint = `${SBR_WS_ENDPOINT}?country=fr`;
     const browser = await chromium.connectOverCDP(wsEndpoint);
 
-    // Create context with FR locale
+    // Create context with generic locale but robust handling
     const context = await browser.newContext({
-        locale: 'fr-FR',
-        timezoneId: 'Europe/Paris'
+        locale: 'en-US',
+        ignoreHTTPSErrors: true
     });
     const page = await context.newPage();
 
     try {
         console.log('🔐 Logging into LinkedIn...');
-        // Force www.linkedin.com with explicit locale
-        await page.goto('https://www.linkedin.com/login?trk=guest_homepage-basic_nav-header-signin', {
-            waitUntil: 'domcontentloaded',
-            timeout: 60000
-        });
+        // Go to generic login page
+        await page.goto('https://www.linkedin.com/login', { waitUntil: 'domcontentloaded', timeout: 60000 });
 
-        // Wait for page to fully load
-        await page.waitForTimeout(5000);
+        await page.waitForTimeout(3000);
 
-        // Check what page we're on
-        const pageUrl = page.url();
-        console.log('📍 Current URL:', pageUrl);
-
-        // Try to find login form - if not found, log page content
+        // Handle Cookie Banner (common issue with international IPs)
         try {
-            await page.waitForSelector('input[name="session_key"]', { timeout: 30000 });
-        } catch (e) {
+            const cookieBtn = await page.$('button[action-type="ACCEPT"], button[data-control-name="ga-cookie.accept"], .artdeco-global-alert-action__button');
+            if (cookieBtn) {
+                console.log('🍪 Clicking cookie banner...');
+                await cookieBtn.click();
+                await page.waitForTimeout(1000);
+            }
+        } catch (e) { console.log('🍪 No cookie banner found'); }
+
+        // Check for login form with multiple selectors
+        const sessionKey = await page.$('input[name="session_key"]') || await page.$('#username');
+
+        if (!sessionKey) {
+            const pageUrl = page.url();
             const pageTitle = await page.title();
             console.log('⚠️ Login form not found!');
             console.log('📍 Page Title:', pageTitle);
-            console.log('📍 Page URL:', page.url());
-            throw new Error(`Login form not found - Page: ${pageTitle} at ${page.url()}`);
+            console.log('📍 Page URL:', pageUrl);
+            throw new Error(`Login form not found - Page: ${pageTitle} at ${pageUrl}`);
         }
 
-        await page.fill('input[name="session_key"]', LINKEDIN_EMAIL);
+        console.log('📝 Filling credentials...');
+        await sessionKey.fill(LINKEDIN_EMAIL);
         await page.waitForTimeout(500);
-        await page.fill('input[name="session_password"]', LINKEDIN_PASSWORD);
+
+        const passwordInput = await page.$('input[name="session_password"]') || await page.$('#password');
+        await passwordInput.fill(LINKEDIN_PASSWORD);
         await page.waitForTimeout(500);
-        await page.click('button[type="submit"]');
+
+        const submitBtn = await page.$('button[type="submit"]') || await page.$('.login__form_action_container button');
+        await submitBtn.click();
 
         // Wait for login with longer timeout
         await page.waitForURL('**/feed/**', { timeout: 120000 });
