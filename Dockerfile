@@ -32,8 +32,8 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm ci --only=production
+# Install dependencies (no lockfile)
+RUN npm install --omit=dev
 
 # Install Playwright browsers
 RUN npx playwright install chromium
