@@ -111,9 +111,24 @@ async function scrapeLinkedIn() {
         const submitBtn = await page.$('button[type="submit"]') || await page.$('.login__form_action_container button');
         await submitBtn.click();
 
-        // Wait for login with longer timeout
-        await page.waitForURL('**/feed/**', { timeout: 120000 });
-        console.log('✅ Logged in!');
+        // Wait for login with longer timeout and debug info
+        try {
+            await page.waitForURL('**/feed/**', { timeout: 120000 });
+            console.log('✅ Logged in!');
+        } catch (e) {
+            console.log('❌ Login timeout! Capturing state...');
+            const finalUrl = page.url();
+            const finalTitle = await page.title();
+            const finalContent = await page.evaluate(() => document.body.innerText.substring(0, 500));
+            
+            // Take screenshot for debugging (if supported)
+            try {
+                await page.screenshot({ path: 'login_failure.png', fullPage: true });
+                console.log('📸 Screenshot saved to login_failure.png');
+            } catch (err) { console.log('📸 Screenshot failed:', err.message); }
+
+            throw new Error(`Login Timeout - Stucked at: ${finalTitle} (${finalUrl}) \nContent Preview: ${finalContent}`);
+        }
 
         // Go to messages
         console.log('📬 Navigating to messages...');
