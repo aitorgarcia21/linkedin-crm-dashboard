@@ -104,6 +104,89 @@ Critères :
     }
 });
 
+// Kimi AI - Batch qualify ALL leads in one API call
+app.post('/api/qualify-all', async (req, res) => {
+    const { conversations } = req.body;
+
+    if (!KIMI_API_KEY) {
+        return res.status(500).json({ success: false, error: 'KIMI_API_KEY non configurée' });
+    }
+
+    if (!conversations || !conversations.length) {
+        return res.status(400).json({ success: false, error: 'Aucune conversation à analyser' });
+    }
+
+    // Build a summary of each conversation for Kimi
+    const summaries = conversations.map((c, i) => {
+        const msgs = (c.messages || []).slice(-6); // Last 6 messages max per conv
+        const convText = msgs.map(m =>
+            `${m.sender === 'me' ? 'Moi' : c.prospect_name}: ${m.content}`
+        ).join('\n');
+        return `--- Lead #${i + 1}: ${c.prospect_name} (id: ${c.id}) ---\n${convText || '(aucun message)'}`;
+    }).join('\n\n');
+
+    const systemPrompt = `Tu es un expert en sales B2B pour IFG (Intelligence Financière & Gestion). Analyse TOUTES les conversations LinkedIn ci-dessous et qualifie chaque lead.
+
+Réponds UNIQUEMENT avec un JSON valide (sans markdown, sans backticks). Un tableau JSON avec un objet par lead :
+[
+  {
+    "id": "l'id de la conversation",
+    "score": "hot" | "warm" | "cold",
+    "action": "relance" | "répondre" | "attendre" | "archiver",
+    "reason": "explication courte (1 phrase max)"
+  }
+]
+
+Critères :
+- "hot" : intérêt clair pour les services IFG, pose des questions, veut avancer
+- "warm" : échange en cours, pas encore d'engagement fort mais potentiel
+- "cold" : pas de réponse, réponse négative, ou conversation morte
+- "relance" : le prospect n'a pas répondu, il faut relancer
+- "répondre" : le dernier message vient du prospect, il attend une réponse
+- "attendre" : on vient d'envoyer un message, laisser du temps
+- "archiver" : conversation terminée ou prospect clairement pas intéressé
+
+Analyse CHAQUE lead séparément. Renvoie exactement ${conversations.length} éléments dans le tableau.`;
+
+    try {
+        const response = await fetch(`${KIMI_BASE_URL}/chat/completions`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${KIMI_API_KEY}`
+            },
+            body: JSON.stringify({
+                model: KIMI_MODEL,
+                messages: [
+                    { role: 'system', content: systemPrompt },
+                    { role: 'user', content: summaries }
+                ],
+                temperature: 0.2
+            })
+        });
+
+        if (!response.ok) {
+            const errText = await response.text();
+            console.error('Kimi batch error:', response.status, errText);
+            return res.status(502).json({ success: false, error: `Kimi API error: ${response.status}` });
+        }
+
+        const data = await response.json();
+        const content = data.choices?.[0]?.message?.content;
+
+        if (!content) {
+            return res.status(502).json({ success: false, error: 'Réponse vide de Kimi' });
+        }
+
+        const results = JSON.parse(content);
+        res.json({ success: true, results });
+
+    } catch (error) {
+        console.error('Qualify-all error:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 // Manual trigger endpoint
 app.post('/scrape', async (req, res) => {
     try {
