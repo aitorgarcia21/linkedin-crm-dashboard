@@ -150,27 +150,43 @@ app.post('/api/sync-converted', async (req, res) => {
         const { data: ifgUsers } = await ifgDb.from('profiles').select('email');
         if (!ifgUsers?.length) return res.json({ success: true, matched: 0 });
 
-        // Extract name parts from emails: "alban.plande@gmail.com" → ["alban", "plande"]
-        const ifgNames = ifgUsers.map(u => {
-            const username = u.email.split('@')[0].toLowerCase();
-            return username.replace(/[0-9_.]/g, ' ').split(/\s+/).filter(p => p.length >= 3);
-        }).filter(parts => parts.length > 0);
+        // Normalize: remove accents, lowercase
+        const norm = (s) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+        // Extract name parts from emails: "albanplande@gmail.com" → "albanplande"
+        // Also split by dots/underscores: "alban.plande@gmail.com" → ["alban", "plande"]
+        const ifgEmails = ifgUsers.map(u => {
+            const username = norm(u.email.split('@')[0]);
+            const parts = username.replace(/[0-9]/g, '').replace(/[._-]/g, ' ').split(/\s+/).filter(p => p.length >= 2);
+            const concat = username.replace(/[0-9._-]/g, ''); // "albanplande"
+            return { parts, concat, email: u.email };
+        });
 
         // Get all prospects from pipeline
         const { data: prospects } = await supabase.from('prospects').select('id, name');
         if (!prospects?.length) return res.json({ success: true, matched: 0 });
 
-        // Match: if ANY IFG email name parts match prospect name parts
+        // Match: check if email username contains prospect first+last name concatenated
         let matched = 0;
         for (const prospect of prospects) {
             if (!prospect.name) continue;
-            const pNameParts = prospect.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').split(/\s+/);
+            const pNorm = norm(prospect.name);
+            const pParts = pNorm.split(/\s+/).filter(p => p.length >= 2);
+            if (pParts.length < 1) continue;
+            const pFirst = pParts[0];
+            const pLast = pParts.length > 1 ? pParts[pParts.length - 1] : '';
+            // Concat variations: "albanplande", "plandalban"
+            const pConcat1 = pFirst + pLast;
+            const pConcat2 = pLast + pFirst;
 
-            const isMatch = ifgNames.some(emailParts => {
-                // At least 2 parts match, OR 1 long part (>=5 chars) matches
-                const matches = emailParts.filter(ep => 
-                    pNameParts.some(pp => pp.includes(ep) || ep.includes(pp))
-                );
+            const isMatch = ifgEmails.some(e => {
+                // Method 1: concatenated match (albanplande ↔ albanplande)
+                if (pConcat1.length >= 6 && (e.concat.includes(pConcat1) || e.concat.includes(pConcat2))) return true;
+                // Method 2: both first AND last name appear in email parts
+                if (pLast && e.parts.some(p => p.includes(pFirst) || pFirst.includes(p)) 
+                          && e.parts.some(p => p.includes(pLast) || pLast.includes(p))) return true;
+                // Method 3: email parts match prospect parts (at least 2 matches or 1 long match)
+                const matches = e.parts.filter(ep => pParts.some(pp => pp.includes(ep) || ep.includes(pp)));
                 return matches.length >= 2 || matches.some(m => m.length >= 5);
             });
 
