@@ -103,7 +103,7 @@
         .msg-time { font-size:9px; margin-top:4px; opacity:0.6; }
         .msg-bubble.me .msg-time { text-align:right; }
 
-        /* Kimi reply area */
+        /* LINKIFG reply area */
         .kimi-area { padding:12px 20px; border-top:2px solid #3B82F6; background:linear-gradient(135deg,#EFF6FF,#F5F3FF); }
         .kimi-area h4 { font-size:11px; font-weight:700; color:#3B82F6; margin-bottom:6px; }
         .kimi-area textarea { width:100%; border:1px solid #BFDBFE; border-radius:8px; padding:10px; font-size:13px; font-family:inherit; resize:vertical; min-height:80px; }
@@ -173,7 +173,7 @@
     <div class="modal-overlay" id="analysisModal">
         <div class="modal">
             <button class="modal-close" onclick="document.getElementById('analysisModal').classList.remove('active')">&times;</button>
-            <h2>🤖 Analyse Kimi K2.5</h2>
+            <h2>🤖 Analyse LINKIFG</h2>
             <div id="analysisSteps"></div>
             <div id="analysisReport"></div>
         </div>
@@ -182,7 +182,7 @@
     <!-- Chatbot -->
     <div class="chatbot-container">
         <div class="chatbot-panel" id="chatbotPanel">
-            <div class="chatbot-header">🤖 Kimi — Assistant IFG <span style="margin-left:auto;font-size:11px;opacity:0.8">connecté</span></div>
+            <div class="chatbot-header">🤖 LINKIFG — Assistant IA <span style="margin-left:auto;font-size:11px;opacity:0.8">connecté</span></div>
             <div class="chatbot-messages" id="chatbotMessages"></div>
             <div style="padding:6px 12px;display:flex;gap:4px;flex-wrap:wrap;border-top:1px solid #E5E7EB">
                 <button class="chat-quick-btn" data-q="Qui contacter en priorité aujourd'hui ?" style="font-size:10px;padding:3px 8px;border-radius:12px;border:1px solid #E5E7EB;background:#F9FAFB;cursor:pointer;color:#374151">🎯 Priorités</button>
@@ -190,7 +190,7 @@
                 <button class="chat-quick-btn" data-q="Rédige un message pour mon meilleur hot lead" style="font-size:10px;padding:3px 8px;border-radius:12px;border:1px solid #E5E7EB;background:#F9FAFB;cursor:pointer;color:#374151">✍️ Message</button>
             </div>
             <div class="chatbot-input">
-                <input type="text" id="chatbotInput" placeholder="Demande à Kimi..." />
+                <input type="text" id="chatbotInput" placeholder="Demande à LINKIFG..." />
                 <button id="chatbotSend">Envoyer</button>
             </div>
         </div>
@@ -203,7 +203,7 @@
             <h1>🔗 LINKIFG</h1>
             <div class="stats" id="pipelineStats"></div>
             <div class="pipeline-actions">
-                <button class="btn btn-primary" id="analyzeBtn">🤖 Analyse Kimi</button>
+                <button class="btn btn-primary" id="analyzeBtn">🤖 Analyser</button>
                 <button class="btn btn-outline" id="syncBtn">🔄 Sync</button>
             </div>
         </div>
@@ -385,11 +385,11 @@
             const kimiMsg = followUp?.generated_message || '';
             document.getElementById('kimiArea').innerHTML = `
                 <div class="kimi-area">
-                    <h4>🤖 Réponse Kimi</h4>
+                    <h4>🤖 Réponse LINKIFG</h4>
                     <textarea id="kimiTextarea">${kimiMsg}</textarea>
                     <div class="kimi-actions">
                         <button class="btn btn-primary" onclick="generateReply()" style="font-size:12px;padding:6px 12px">🤖 Générer</button>
-                        <button class="btn btn-outline" onclick="copyKimi()" style="font-size:12px;padding:6px 12px">📋 Copier</button>
+                        <button class="btn btn-outline" onclick="copyReply()" style="font-size:12px;padding:6px 12px">📋 Copier</button>
                         <a class="btn btn-outline" href="${p.linkedin_url || '#'}" target="_blank" style="font-size:12px;padding:6px 12px;text-decoration:none;display:inline-block">🔗 LinkedIn</a>
                     </div>
                 </div>`;
@@ -467,7 +467,7 @@
             const d = window._detail;
             if (!d) return;
             const textarea = document.getElementById('kimiTextarea');
-            textarea.value = '⏳ Kimi réfléchit...';
+            textarea.value = '⏳ Génération en cours...';
 
             try {
                 const conversation = d.msgs.map(m => `${m.sender === 'me' ? 'Moi' : d.name}: ${m.content}`).join('\n');
@@ -480,7 +480,7 @@
             } catch(e) { textarea.value = '❌ ' + e.message; }
         }
 
-        async function copyKimi() {
+        async function copyReply() {
             const textarea = document.getElementById('kimiTextarea');
             if (!textarea?.value) return;
             await navigator.clipboard.writeText(textarea.value);
@@ -510,7 +510,7 @@
 
             stepsEl.innerHTML = `
                 <div class="report-step running" id="step-scrape"><div class="report-step-icon">📬</div><div class="report-step-info"><h4>Scraping</h4><p>Nouveaux messages...</p></div><div class="report-step-badge" style="background:#FEF3C7;color:#92400E">En cours</div></div>
-                <div class="report-step" id="step-ai"><div class="report-step-icon">🤖</div><div class="report-step-info"><h4>Analyse Kimi</h4><p>Attente...</p></div><div class="report-step-badge" style="background:#F3F4F6;color:#6B7280">Attente</div></div>
+                <div class="report-step" id="step-ai"><div class="report-step-icon">🤖</div><div class="report-step-info"><h4>Analyse IA</h4><p>Attente...</p></div><div class="report-step-badge" style="background:#F3F4F6;color:#6B7280">Attente</div></div>
                 <div class="report-step" id="step-list"><div class="report-step-icon">📋</div><div class="report-step-info"><h4>Contact list</h4><p>Attente...</p></div><div class="report-step-badge" style="background:#F3F4F6;color:#6B7280">Attente</div></div>`;
 
             try {
@@ -540,7 +540,7 @@
                 loadPipeline();
             } catch(e) {
                 stepsEl.innerHTML += `<div class="report-step error"><div class="report-step-icon">❌</div><div class="report-step-info"><h4>Erreur</h4><p>${e.message}</p></div></div>`;
-            } finally { btn.disabled = false; btn.textContent = '🤖 Analyse Kimi'; }
+            } finally { btn.disabled = false; btn.textContent = '🤖 Analyser'; }
         });
 
         // ===== CHATBOT =====
@@ -565,10 +565,10 @@
             document.getElementById('chatbotInput').value = '';
             addUserMsg(q); chatHistory.push({role:'user',content:q});
             document.getElementById('chatbotSend').disabled = true;
-            const typing = document.createElement('div'); typing.className='chat-msg bot chat-typing'; typing.textContent='Kimi réfléchit...';
+            const typing = document.createElement('div'); typing.className='chat-msg bot chat-typing'; typing.textContent='LINKIFG réfléchit...';
             document.getElementById('chatbotMessages').appendChild(typing);
             try {
-                const res = await fetch(`${API_URL}/api/kimi-chat`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({question:q,history:chatHistory.slice(-6)}) });
+                const res = await fetch(`${API_URL}/api/linkifg-chat`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({question:q,history:chatHistory.slice(-6)}) });
                 const data = await res.json(); typing.remove();
                 if (data.success) { addBotMsg(data.answer); chatHistory.push({role:'assistant',content:data.answer}); }
                 else addBotMsg('❌ ' + (data.error||'Erreur'));

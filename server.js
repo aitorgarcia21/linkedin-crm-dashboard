@@ -424,8 +424,8 @@ app.get('/api/converted', async (req, res) => {
     }
 });
 
-// Kimi Chatbot - connected to ALL Supabase data (LINKIFG pipeline + IFG product)
-app.post('/api/kimi-chat', async (req, res) => {
+// LINKIFG Chatbot - connected to ALL Supabase data (LINKIFG pipeline + IFG product)
+app.post('/api/linkifg-chat', async (req, res) => {
     try {
         const { question, history } = req.body;
         if (!question) return res.status(400).json({ success: false, error: 'Question requise' });
