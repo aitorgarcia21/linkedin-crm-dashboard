@@ -24,14 +24,34 @@ async function scrapeLinkedIn() {
 
     try {
         console.log('🔐 Logging into LinkedIn...');
-        await page.goto('https://www.linkedin.com/login', { waitUntil: 'networkidle' });
+        await page.goto('https://www.linkedin.com/login', { waitUntil: 'domcontentloaded', timeout: 60000 });
+
+        // Wait for page to fully load
+        await page.waitForTimeout(5000);
+
+        // Check what page we're on
+        const pageUrl = page.url();
+        console.log('📍 Current URL:', pageUrl);
+
+        // Try to find login form - if not found, log page content
+        try {
+            await page.waitForSelector('input[name="session_key"]', { timeout: 30000 });
+        } catch (e) {
+            const pageTitle = await page.title();
+            console.log('⚠️ Login form not found!');
+            console.log('📍 Page Title:', pageTitle);
+            console.log('📍 Page URL:', page.url());
+            throw new Error(`Login form not found - Page: ${pageTitle} at ${page.url()}`);
+        }
 
         await page.fill('input[name="session_key"]', LINKEDIN_EMAIL);
+        await page.waitForTimeout(500);
         await page.fill('input[name="session_password"]', LINKEDIN_PASSWORD);
+        await page.waitForTimeout(500);
         await page.click('button[type="submit"]');
 
-        // Wait for login
-        await page.waitForURL('**/feed/**', { timeout: 60000 });
+        // Wait for login with longer timeout
+        await page.waitForURL('**/feed/**', { timeout: 120000 });
         console.log('✅ Logged in!');
 
         // Go to messages
