@@ -320,8 +320,34 @@ async function scrapeLinkedIn(forceFullScrape = false) {
                     const sender = isMe ? 'me' : 'them';
                     const contentEl = await msgEl.$('.msg-s-event-listitem__body');
                     const content = contentEl ? await contentEl.innerText() : '';
+                    
+                    // Extract timestamp — try multiple methods (LinkedIn changes DOM)
+                    let timestamp = null;
                     const timeEl = await msgEl.$('time');
-                    const timestamp = timeEl ? await timeEl.getAttribute('datetime') : new Date().toISOString();
+                    if (timeEl) {
+                        timestamp = await timeEl.getAttribute('datetime');
+                        // If no datetime attr, try the text content ("Feb 5, 2026, 7:34 PM")
+                        if (!timestamp || timestamp === 'null') {
+                            const timeText = await timeEl.innerText();
+                            if (timeText) {
+                                const parsed = new Date(timeText);
+                                if (!isNaN(parsed.getTime())) timestamp = parsed.toISOString();
+                            }
+                        }
+                    }
+                    // Fallback: look for any time-related element
+                    if (!timestamp) {
+                        const altTime = await msgEl.$('[class*="time"], [class*="timestamp"], [class*="date"]');
+                        if (altTime) {
+                            const altText = await altTime.innerText();
+                            if (altText) {
+                                const parsed = new Date(altText);
+                                if (!isNaN(parsed.getTime())) timestamp = parsed.toISOString();
+                            }
+                        }
+                    }
+                    // Last resort: use current time (will be approximate)
+                    if (!timestamp) timestamp = new Date().toISOString();
 
                     if (!content.trim()) continue;
 

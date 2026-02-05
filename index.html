@@ -514,9 +514,8 @@
                 }
                 body.innerHTML = '<div class="msg-list">' + d.msgs.map(m => `
                     <div class="msg-bubble ${m.sender === 'me' ? 'me' : 'them'}">
-                        <div class="msg-sender">${m.sender === 'me' ? '📤 Moi' : '📩 ' + d.name}</div>
+                        <div class="msg-sender">${m.sender === 'me' ? '📤 Moi (Aitor)' : '📩 ' + d.name}</div>
                         ${m.content}
-                        <div class="msg-time">${new Date(m.timestamp).toLocaleString('fr-FR')}</div>
                     </div>
                 `).join('') + '</div>';
                 // Scroll to bottom
