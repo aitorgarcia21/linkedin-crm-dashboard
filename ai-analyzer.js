@@ -80,7 +80,7 @@ Réponds UNIQUEMENT avec le JSON, sans texte avant ou après.`;
                     { role: 'user', content: prompt }
                 ],
                 temperature: 0.3,
-                max_tokens: 1000
+                max_tokens: 2000
             })
         });
 
@@ -89,7 +89,12 @@ Réponds UNIQUEMENT avec le JSON, sans texte avant ou après.`;
         }
 
         const data = await response.json();
-        const aiResponse = data.choices[0].message.content.trim();
+        // Kimi K2.5 puts thinking in reasoning_content and answer in content
+        const aiResponse = (data.choices[0].message.content || '').trim();
+        
+        if (!aiResponse) {
+            throw new Error('Empty response from Kimi (reasoning only, no content)');
+        }
         
         // Parse JSON response
         const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
@@ -257,7 +262,7 @@ Réponds UNIQUEMENT avec le message, sans introduction ni conclusion.`;
                     { role: 'user', content: prompt }
                 ],
                 temperature: 0.7,
-                max_tokens: 500
+                max_tokens: 1500
             })
         });
 
