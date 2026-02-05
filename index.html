@@ -327,6 +327,11 @@
             color: #991B1B;
         }
 
+        .badge-attendre {
+            background: #E0E7FF;
+            color: #3730A3;
+        }
+
         /* Message View */
         .msg-view {
             flex: 1;
@@ -1077,7 +1082,10 @@
                     <p class="success" id="statOpportunities">--</p>
                 </div>
             </div>
-            <div class="status-badge"><span class="dot"></span> Système Opérationnel</div>
+            <button class="btn btn-outline" id="qualifyAllBtn" onclick="qualifyAll()" style="white-space:nowrap;gap:6px;display:inline-flex;align-items:center">
+                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                Qualifier tous
+            </button>
         </header>
 
         <div class="content">
@@ -1165,9 +1173,17 @@
                 const time = c.lastMsg ? timeAgo(c.lastMsg.timestamp) : '';
 
                 let badges = '';
-                if (c.lastMsg?.sender !== 'me') badges += '<span class="badge badge-urgent">À répondre</span>';
-                else if (c.lastMsg && (Date.now() - new Date(c.lastMsg.timestamp)) > 259200000) badges += '<span class="badge badge-followup">Relance</span>';
-                badges += `<span class="badge badge-${c.engagement_level || 'cold'}">${c.engagement_level || 'cold'}</span>`;
+                // AI action badge (from status field)
+                const actionMap = { 'répondre': 'urgent', 'relance': 'followup', 'attendre': 'warm', 'archiver': 'cold' };
+                const actionLabel = { 'répondre': 'À répondre', 'relance': 'Relance', 'attendre': 'Attendre', 'archiver': 'Archiver' };
+                if (c.status && actionMap[c.status]) {
+                    badges += `<span class="badge badge-${actionMap[c.status]}">${actionLabel[c.status]}</span>`;
+                } else {
+                    // Fallback: manual logic if no AI qualification yet
+                    if (c.lastMsg?.sender !== 'me') badges += '<span class="badge badge-urgent">À répondre</span>';
+                    else if (c.lastMsg && (Date.now() - new Date(c.lastMsg.timestamp)) > 259200000) badges += '<span class="badge badge-followup">Relance</span>';
+                }
+                badges += `<span class="badge badge-${c.engagement_level || 'cold'}">${(c.engagement_level || 'cold').toUpperCase()}</span>`;
 
                 return `<div class="conv-item${c.id === activeId ? ' active' : ''}" onclick="select('${c.id}')">
                     <div class="conv-header"><span class="conv-name">${name}</span><span class="conv-time">${time}</span></div>
@@ -1272,8 +1288,8 @@
 
                 const q = result.qualification;
 
-                // Update engagement_level in Supabase
-                await db.from('conversations').update({ engagement_level: q.score }).eq('id', currentConvData.id);
+                // Update engagement_level + status in Supabase
+                await db.from('conversations').update({ engagement_level: q.score, status: q.action }).eq('id', currentConvData.id);
 
                 // Render qualification panel
                 const suggestionHtml = q.suggested_message ? `
@@ -1332,8 +1348,75 @@
 
         async function archiveLead() {
             if (!activeId) return;
-            await db.from('conversations').update({ status: 'archived', engagement_level: 'cold' }).eq('id', activeId);
+            await db.from('conversations').update({ status: 'archiver', engagement_level: 'cold' }).eq('id', activeId);
             load();
+        }
+
+        async function qualifyAll() {
+            const btn = document.getElementById('qualifyAllBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<div class="spinner" style="width:14px;height:14px;border-width:2px;margin:0"></div> Analyse IA...';
+
+            // Fetch all conversations with messages
+            const { data, error } = await db.from('conversations').select(`
+                id, prospects (name), messages (content, sender, timestamp)
+            `).order('last_message_at', { ascending: false });
+
+            if (error || !data?.length) {
+                btn.disabled = false;
+                btn.textContent = 'Qualifier tous';
+                alert('Aucune conversation à analyser');
+                return;
+            }
+
+            // Build payload for batch qualification
+            const conversations = data.filter(c => c.messages?.length).map(c => ({
+                id: c.id,
+                prospect_name: c.prospects?.name || 'Inconnu',
+                messages: (c.messages || [])
+                    .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp))
+                    .slice(-6)
+            }));
+
+            try {
+                const res = await fetch(`${API_URL}/api/qualify-all`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ conversations })
+                });
+
+                const result = await res.json();
+
+                if (!result.success) {
+                    alert('Erreur qualification : ' + result.error);
+                    btn.disabled = false;
+                    btn.innerHTML = '<svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg> Qualifier tous';
+                    return;
+                }
+
+                // Update each conversation in Supabase
+                let updated = 0;
+                for (const r of result.results) {
+                    if (!r.id) continue;
+                    await db.from('conversations').update({
+                        engagement_level: r.score,
+                        status: r.action
+                    }).eq('id', r.id);
+                    updated++;
+                }
+
+                // Refresh UI
+                await load();
+                btn.disabled = false;
+                btn.innerHTML = '<svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg> Qualifier tous';
+                alert(`${updated} leads qualifiés par Kimi AI`);
+
+            } catch (e) {
+                console.error('QualifyAll error:', e);
+                alert('Erreur de connexion au serveur');
+                btn.disabled = false;
+                btn.innerHTML = '<svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg> Qualifier tous';
+            }
         }
 
         function updateStats(convs) {
@@ -1349,12 +1432,14 @@
                 const res = await fetch(`${API_URL}/scrape`, { method: 'POST' });
                 const data = await res.json();
                 if (data.success) {
-                    alert(`Synchronisation réussie ! ${data.saved} conversations sauvegardées`);
+                    alert(`Synchronisation réussie ! ${data.saved} conversations sauvegardées. Qualification IA en cours...`);
+                    // Auto-qualify all leads after sync
+                    setTimeout(qualifyAll, 2000);
                 } else {
                     alert('Erreur: ' + data.error);
                 }
-            } catch (e) { 
-                alert('Erreur de connexion au scraper'); 
+            } catch (e) {
+                alert('Erreur de connexion au scraper');
                 console.error(e);
             }
             this.disabled = false;
