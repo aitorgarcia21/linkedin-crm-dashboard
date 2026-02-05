@@ -72,10 +72,45 @@ async function scrapeLinkedIn(forceFullScrape = false) {
         await page.fill('input#password', LINKEDIN_PASSWORD);
         await page.click('button[type="submit"]');
         
-        // Wait for navigation to feed
+        // Wait for navigation — handle various post-login redirects
         console.log('⏳ Waiting for login...');
-        await page.waitForURL('**/feed/**', { timeout: 60000 });
-        console.log('✅ Logged in!');
+        try {
+            await page.waitForURL('**/feed/**', { timeout: 30000 });
+            console.log('✅ Logged in!');
+        } catch (loginErr) {
+            const currentUrl = page.url();
+            console.log(`⚠️ Login redirect to: ${currentUrl}`);
+            
+            // Handle checkpoint/verification page
+            if (currentUrl.includes('checkpoint') || currentUrl.includes('challenge')) {
+                console.log('🔒 LinkedIn security checkpoint detected — trying to proceed...');
+                // Try clicking any "continue" or "verify" buttons
+                const verifyBtns = ['button[type="submit"]', 'button:has-text("Verify")', 'button:has-text("Continue")', 'button:has-text("Continuer")', '#email-pin-submit-button'];
+                for (const sel of verifyBtns) {
+                    const btn = await page.$(sel);
+                    if (btn) { await btn.click(); await page.waitForTimeout(3000); break; }
+                }
+                // Wait again for feed
+                try {
+                    await page.waitForURL('**/feed/**', { timeout: 30000 });
+                    console.log('✅ Logged in after checkpoint!');
+                } catch (e2) {
+                    // Last resort: try going directly to messaging
+                    console.log('⚠️ Still not on feed, trying direct messaging access...');
+                }
+            }
+            // If already on messaging or feed, that's fine
+            else if (currentUrl.includes('messaging') || currentUrl.includes('feed')) {
+                console.log('✅ Already logged in!');
+            }
+            // If on login page still, credentials may be wrong
+            else if (currentUrl.includes('login')) {
+                throw new Error('LinkedIn login failed — check credentials');
+            }
+            else {
+                console.log('⚠️ Unknown redirect, trying to continue anyway...');
+            }
+        }
 
         // Go to messages with retry
         console.log('📬 Navigating to messages...');
