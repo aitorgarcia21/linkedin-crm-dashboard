@@ -308,8 +308,16 @@ async function scrapeLinkedIn(forceFullScrape = false) {
                 let newMsgCount = 0;
 
                 for (const msgEl of messageEls) {
-                    const isSelf = await msgEl.$('.msg-s-message-list__event--from-self');
-                    const sender = isSelf ? 'me' : 'them';
+                    // Multiple ways to detect if message is from me (LinkedIn changes classes)
+                    const isSelf = await msgEl.$('.msg-s-message-list__event--from-self')
+                        || await msgEl.$('[class*="from-self"]')
+                        || await msgEl.$('[class*="outgoing"]');
+                    // Fallback: check sender name element for "Aitor"
+                    let senderName = '';
+                    const senderEl = await msgEl.$('.msg-s-message-group__name, .msg-s-event-listitem__sender, [class*="sender"]');
+                    if (senderEl) senderName = (await senderEl.innerText() || '').trim();
+                    const isMe = isSelf || senderName.toLowerCase().includes('aitor');
+                    const sender = isMe ? 'me' : 'them';
                     const contentEl = await msgEl.$('.msg-s-event-listitem__body');
                     const content = contentEl ? await contentEl.innerText() : '';
                     const timeEl = await msgEl.$('time');

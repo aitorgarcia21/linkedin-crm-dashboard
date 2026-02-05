@@ -111,48 +111,65 @@ AJUSTEMENT PAR TEMPÉRATURE:
 
 Réponds UNIQUEMENT avec le JSON, sans texte avant ou après.`;
 
-        const response = await fetch(`${KIMI_BASE_URL}/chat/completions`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${KIMI_API_KEY}`
-            },
-            body: JSON.stringify({
-                model: KIMI_MODEL,
-                messages: [
-                    { role: 'user', content: prompt }
-                ],
-                temperature: 1,
-                max_tokens: 4096
-            })
-        });
+        // Retry up to 2 times on empty/invalid responses
+        let lastError = null;
+        for (let attempt = 0; attempt < 3; attempt++) {
+            try {
+                if (attempt > 0) {
+                    // Wait before retry (1s, then 2s)
+                    await new Promise(r => setTimeout(r, attempt * 1000));
+                }
 
-        if (!response.ok) {
-            const errBody = await response.text();
-            console.error(`❌ Kimi API ${response.status} response:`, errBody.slice(0, 500));
-            throw new Error(`Kimi API error: ${response.status} ${response.statusText} — ${errBody.slice(0, 200)}`);
-        }
+                const response = await fetch(`${KIMI_BASE_URL}/chat/completions`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${KIMI_API_KEY}`
+                    },
+                    body: JSON.stringify({
+                        model: KIMI_MODEL,
+                        messages: [
+                            { role: 'user', content: prompt }
+                        ],
+                        temperature: 1,
+                        max_tokens: 4096
+                    })
+                });
 
-        const data = await response.json();
-        // Kimi K2.5 puts thinking in reasoning_content and answer in content
-        const aiResponse = (data.choices[0].message.content || '').trim();
-        
-        if (!aiResponse) {
-            throw new Error('Empty response from Kimi (reasoning only, no content)');
-        }
-        
-        // Parse JSON response
-        const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
-        if (!jsonMatch) {
-            throw new Error('Invalid JSON response from AI');
-        }
+                if (!response.ok) {
+                    const errBody = await response.text();
+                    if (response.status === 429) {
+                        // Rate limited — wait longer and retry
+                        await new Promise(r => setTimeout(r, 3000));
+                        lastError = new Error(`Rate limited (429)`);
+                        continue;
+                    }
+                    throw new Error(`Kimi API error: ${response.status} — ${errBody.slice(0, 200)}`);
+                }
 
-        const analysis = JSON.parse(jsonMatch[0]);
-        
-        return {
-            success: true,
-            analysis
-        };
+                const data = await response.json();
+                const aiResponse = (data.choices[0].message.content || '').trim();
+                
+                if (!aiResponse) {
+                    lastError = new Error('Empty response from Kimi');
+                    continue; // retry
+                }
+                
+                const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
+                if (!jsonMatch) {
+                    lastError = new Error('Invalid JSON response');
+                    continue; // retry
+                }
+
+                const analysis = JSON.parse(jsonMatch[0]);
+                return { success: true, analysis };
+
+            } catch (retryErr) {
+                lastError = retryErr;
+            }
+        }
+        // All retries failed
+        throw lastError || new Error('All retries failed');
 
     } catch (error) {
         console.error('❌ AI analysis error:', error.message);

@@ -15,7 +15,7 @@ const SUPABASE_KEY = process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_KEY;
  */
 async function processConversationsWithAI() {
     const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
-    const BATCH_SIZE = 20;
+    const BATCH_SIZE = 5;
     
     console.log('🤖 Starting AI analysis workflow...');
     
