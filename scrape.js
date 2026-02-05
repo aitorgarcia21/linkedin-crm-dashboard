@@ -23,21 +23,32 @@ async function scrapeLinkedIn() {
     const wsEndpoint = `${SBR_WS_ENDPOINT}?country=us`;
     const browser = await chromium.connectOverCDP(wsEndpoint);
 
-    // Create context with generic locale but robust handling
+    // Create context with Desktop UA and Viewport to avoid mobile/interstitial pages
     const context = await browser.newContext({
         locale: 'en-US',
+        userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+        viewport: { width: 1920, height: 1080 },
         ignoreHTTPSErrors: true
     });
     const page = await context.newPage();
 
     try {
         console.log('🔐 Logging into LinkedIn...');
-        // Go to specific login page to reduce redirects
-        await page.goto('https://www.linkedin.com/login?trk=guest_homepage-basic_nav-header-signin', { waitUntil: 'domcontentloaded', timeout: 60000 });
 
+        // 1. Go to Homepage first (more robust than direct login URL)
+        console.log('🌍 Navigating to Homepage...');
+        await page.goto('https://www.linkedin.com', { waitUntil: 'domcontentloaded', timeout: 60000 });
         await page.waitForTimeout(3000);
 
-        // Handle Cookie Banner (common issue with international IPs)
+        // 2. Click "Sign in" if on homepage
+        const signInBtn = await page.$('.nav__button-secondary, .sign-in-card__button, a[href*="login"]');
+        if (signInBtn) {
+            console.log('👉 Add clicking "Sign In" button...');
+            await signInBtn.click();
+            await page.waitForTimeout(3000);
+        }
+
+        // Handle Cookie Banner
         try {
             const cookieBtn = await page.$('button[action-type="ACCEPT"], button[data-control-name="ga-cookie.accept"], .artdeco-global-alert-action__button');
             if (cookieBtn) {
