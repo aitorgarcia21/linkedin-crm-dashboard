@@ -3,33 +3,37 @@ const { createClient } = require('@supabase/supabase-js');
 
 // Config
 const AUTH = process.env.BRIGHT_DATA_AUTH || 'brd-customer-hl_dbce36ae-zone-scraping_browser1:de8e8wg0wkf3';
-// Add country targeting to username for stronger enforcement
+// Add country targeting to username for stronger enforcement (FRANCE)
 const [user, pass] = AUTH.split(':');
-const AUTH_US = `${user}-country-us:${pass}`;
-const SBR_WS_ENDPOINT = `wss://${AUTH_US}@brd.superproxy.io:9222`;
+const AUTH_FR = `${user}-country-fr:${pass}`;
+const SBR_WS_ENDPOINT = `wss://${AUTH_FR}@brd.superproxy.io:9222`;
 
-const LINKEDIN_EMAIL = process.env.LINKEDIN_EMAIL || 'aitorgarcia2112@gmail.com';
-const LINKEDIN_PASSWORD = process.env.LINKEDIN_PASSWORD || '21AiPa01....';
-
-const SUPABASE_URL = process.env.SUPABASE_URL || 'https://igyxcobujacampiqndpf.supabase.co';
-const SUPABASE_KEY = process.env.SUPABASE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlneXhjb2J1amFjYW1waXFuZHBmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk5NDYxMTUsImV4cCI6MjA4NTUyMjExNX0.8jgz6G0Irj6sRclcBKzYE5VzzXNrxzHgrAz45tHfHpc';
-
-const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+// ... (existing code) ...
 
 async function scrapeLinkedIn() {
-    console.log('🔌 Connecting to Bright Data Scraping Browser...');
+    console.log('🔌 Connecting to Bright Data Scraping Browser (FRANCE)...');
 
-    // Target US (enforced via Auth string + query param)
-    const wsEndpoint = `${SBR_WS_ENDPOINT}?country=us`;
+    // Target France (enforced via Auth string + query param)
+    const wsEndpoint = `${SBR_WS_ENDPOINT}?country=fr`;
     const browser = await chromium.connectOverCDP(wsEndpoint);
 
-    // Create context with Desktop UA and Viewport to avoid mobile/interstitial pages
+    // Create context with Desktop UA and Viewport (FR locale)
     const context = await browser.newContext({
-        locale: 'en-US',
+        locale: 'fr-FR',
+        timezoneId: 'Europe/Paris',
         userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
         viewport: { width: 1920, height: 1080 },
         ignoreHTTPSErrors: true
     });
+
+    // ... (existing code for navigation) ...
+
+    // Use evaluate to set password values directly (simple assignment to bypass restriction)
+    await passwordInput.evaluate((el, password) => {
+        el.value = password;
+        // Only dispatch 'input' event, sometimes 'change' or too many events trigger security blocks
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+    }, LINKEDIN_PASSWORD);
     const page = await context.newPage();
 
     try {
