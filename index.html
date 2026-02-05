@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LinkedIn AI CRM</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: white;
+            margin-bottom: 30px;
+            font-size: 2.5rem;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .stat-card h3 {
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 10px;
+        }
+        .stat-card .value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+        .conversations {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .conversation-item {
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .conversation-item:hover {
+            background: #f5f5f5;
+        }
+        .prospect-name {
+            font-weight: 600;
+            font-size: 1.1rem;
+            margin-bottom: 5px;
+        }
+        .engagement {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+        .engagement.hot { background: #fee; color: #c00; }
+        .engagement.warm { background: #ffeaa7; color: #d63031; }
+        .engagement.cold { background: #dfe6e9; color: #636e72; }
+        .urgency {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            margin-left: 10px;
+        }
+        .urgency.urgent { background: #ff7675; color: white; }
+        .urgency.important { background: #fdcb6e; color: #2d3436; }
+        .urgency.medium { background: #74b9ff; color: white; }
+        .urgency.low { background: #dfe6e9; color: #636e72; }
+        .score {
+            font-size: 0.9rem;
+            color: #666;
+            margin-top: 5px;
+        }
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            margin-bottom: 20px;
+        }
+        button:hover {
+            background: #5568d3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎯 LinkedIn AI CRM</h1>
+        
+        <div class="stats">
+            <div class="stat-card">
+                <h3>Total Prospects</h3>
+                <div class="value" id="total-prospects">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>Hot Leads 🔥</h3>
+                <div class="value" id="hot-leads">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>Taux de Réponse</h3>
+                <div class="value" id="response-rate">0%</div>
+            </div>
+            <div class="stat-card">
+                <h3>Conversions</h3>
+                <div class="value" id="conversions">0</div>
+            </div>
+        </div>
+
+        <button onclick="triggerScrape()">🔄 Scanner LinkedIn</button>
+
+        <div class="conversations">
+            <h2 style="margin-bottom: 20px;">Conversations</h2>
+            <div id="conversations-list">
+                <p style="color: #999;">Chargement...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://igyxcobujacampiqndpf.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlneXhjb2J1amFjYW1waXFuZHBmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk5NDYxMTUsImV4cCI6MjA4NTUyMjExNX0.8jgz6G0Irj6sRclcBKzYE5VzzXNrxzHgrAz45tHfHpc';
+        
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        async function loadConversations() {
+            const { data: conversations, error } = await supabase
+                .from('conversations')
+                .select(`
+                    *,
+                    prospects (name, company, job_title)
+                `)
+                .order('conversion_probability', { ascending: false });
+
+            if (error) {
+                console.error('Error:', error);
+                return;
+            }
+
+            // Update stats
+            document.getElementById('total-prospects').textContent = conversations.length;
+            document.getElementById('hot-leads').textContent = 
+                conversations.filter(c => c.engagement_level === 'hot').length;
+            document.getElementById('conversions').textContent = 
+                conversations.filter(c => c.status === 'converted').length;
+
+            // Render conversations
+            const list = document.getElementById('conversations-list');
+            list.innerHTML = conversations.map(conv => `
+                <div class="conversation-item">
+                    <div class="prospect-name">${conv.prospects?.name || 'Unknown'}</div>
+                    <div>
+                        <span class="engagement ${conv.engagement_level}">${conv.engagement_level}</span>
+                        <span class="urgency ${conv.urgency}">${conv.urgency}</span>
+                    </div>
+                    <div class="score">
+                        💯 Conversion: ${conv.conversion_probability}% | 
+                        😊 Sentiment: ${conv.sentiment_score}/10
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function triggerScrape() {
+            alert('Scraping lancé ! Cela peut prendre 1-2 minutes...');
+            const response = await fetch(`${SUPABASE_URL}/functions/v1/scrape-linkedin`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${SUPABASE_KEY}`,
+                },
+            });
+            const result = await response.json();
+            alert(`✅ ${result.conversations_scraped} conversations scrapées !`);
+            loadConversations();
+        }
+
+        // Load on start
+        loadConversations();
+
+        // Realtime updates
+        supabase
+            .channel('conversations')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'conversations' }, loadConversations)
+            .subscribe();
+    </script>
+</body>
+</html>

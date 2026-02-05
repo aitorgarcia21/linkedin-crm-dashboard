@@ -1,0 +1,11 @@
+{
+    "name": "linkedin-ai-crm-dashboard",
+    "version": "1.0.0",
+    "description": "LinkedIn AI CRM Dashboard",
+    "scripts": {
+        "start": "npx serve -s . -l $PORT"
+    },
+    "dependencies": {
+        "serve": "^14.2.1"
+    }
+}
