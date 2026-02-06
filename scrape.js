@@ -62,86 +62,21 @@ async function scrapeLinkedIn(forceFullScrape = false) {
     }
 
     try {
-        // === LOGIN: prefer li_at cookie, fallback to credentials ===
-        if (LINKEDIN_LI_AT) {
-            console.log('🍪 Using li_at session cookie...');
-            await context.addCookies([
-                {
-                    name: 'li_at',
-                    value: LINKEDIN_LI_AT,
-                    domain: '.linkedin.com',
-                    path: '/',
-                    httpOnly: true,
-                    secure: true,
-                    sameSite: 'None'
-                },
-                {
-                    name: 'JSESSIONID',
-                    value: 'ajax:0000000000000000000',
-                    domain: '.linkedin.com',
-                    path: '/',
-                    httpOnly: false,
-                    secure: true,
-                    sameSite: 'None'
-                }
-            ]);
-            // Load linkedin.com first to establish session
-            console.log('🌐 Loading linkedin.com to establish session...');
-            await page.goto('https://www.linkedin.com/feed/', { waitUntil: 'domcontentloaded', timeout: 60000 });
-            await page.waitForTimeout(3000);
-            const currentUrl = page.url();
-            if (currentUrl.includes('login') || currentUrl.includes('checkpoint')) {
-                console.log('⚠️ li_at cookie expired or invalid, falling back to credentials...');
-                // Fall through to credential login below
-            } else {
-                console.log('✅ Session cookie login successful!');
-            }
-        }
+        // Simple login with credentials
+        console.log('🔐 Logging into LinkedIn...');
+        await page.goto('https://www.linkedin.com/login', { waitUntil: 'load', timeout: 60000 });
+        await page.waitForTimeout(3000);
         
-        // Credential login if no cookie or cookie failed
-        if (!LINKEDIN_LI_AT || page.url().includes('login') || page.url().includes('checkpoint')) {
-            console.log('🔐 Logging into LinkedIn with credentials...');
-            await page.goto('https://www.linkedin.com/login', { waitUntil: 'load', timeout: 60000 });
-            await page.waitForTimeout(3000);
-            
-            console.log('📝 Entering credentials...');
-            await page.fill('input#username', LINKEDIN_EMAIL);
-            await page.fill('input#password', LINKEDIN_PASSWORD);
-            await page.click('button[type="submit"]');
-            
-            console.log('⏳ Waiting for login...');
-            try {
-                await page.waitForURL('**/feed/**', { timeout: 30000 });
-                console.log('✅ Logged in!');
-            } catch (loginErr) {
-                const currentUrl = page.url();
-                console.log(`⚠️ Login redirect to: ${currentUrl}`);
-                
-                if (currentUrl.includes('checkpoint') || currentUrl.includes('challenge')) {
-                    console.log('🔒 LinkedIn security checkpoint detected — trying to proceed...');
-                    const verifyBtns = ['button[type="submit"]', 'button:has-text("Verify")', 'button:has-text("Continue")', 'button:has-text("Continuer")', '#email-pin-submit-button'];
-                    for (const sel of verifyBtns) {
-                        const btn = await page.$(sel);
-                        if (btn) { await btn.click({ force: true }); await page.waitForTimeout(3000); break; }
-                    }
-                    try {
-                        await page.waitForURL('**/feed/**', { timeout: 30000 });
-                        console.log('✅ Logged in after checkpoint!');
-                    } catch (e2) {
-                        console.log('⚠️ Still not on feed, trying direct messaging access...');
-                    }
-                }
-                else if (currentUrl.includes('messaging') || currentUrl.includes('feed')) {
-                    console.log('✅ Already logged in!');
-                }
-                else if (currentUrl.includes('login')) {
-                    throw new Error('LinkedIn login failed — check credentials. Consider setting LINKEDIN_LI_AT env var with your li_at cookie.');
-                }
-                else {
-                    console.log('⚠️ Unknown redirect, trying to continue anyway...');
-                }
-            }
-        }
+        // Fill credentials
+        console.log('📝 Entering credentials...');
+        await page.fill('input#username', LINKEDIN_EMAIL);
+        await page.fill('input#password', LINKEDIN_PASSWORD);
+        await page.click('button[type="submit"]');
+        
+        // Wait for navigation to feed
+        console.log('⏳ Waiting for login...');
+        await page.waitForURL('**/feed/**', { timeout: 60000 });
+        console.log('✅ Logged in!');
 
         // Go to messages with retry
         console.log('📬 Navigating to messages...');
