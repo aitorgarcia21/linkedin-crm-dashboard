@@ -62,40 +62,21 @@ async function scrapeLinkedIn(forceFullScrape = false) {
     }
 
     try {
-        let loggedIn = false;
-
-        // Method 1: li_at cookie (preferred — no checkpoint risk)
-        if (LINKEDIN_LI_AT) {
-            console.log('🍪 Trying li_at session cookie...');
-            await context.addCookies([
-                { name: 'li_at', value: LINKEDIN_LI_AT, domain: '.linkedin.com', path: '/', httpOnly: true, secure: true },
-                { name: 'JSESSIONID', value: '"ajax:0000000000000000000"', domain: '.www.linkedin.com', path: '/', httpOnly: false, secure: true }
-            ]);
-            await page.goto('https://www.linkedin.com/feed/', { waitUntil: 'domcontentloaded', timeout: 30000 });
-            await page.waitForTimeout(3000);
-            const url = page.url();
-            console.log(`📍 After cookie load: ${url}`);
-            if (!url.includes('login') && !url.includes('checkpoint') && !url.includes('authwall')) {
-                console.log('✅ Logged in via cookie!');
-                loggedIn = true;
-            } else {
-                console.log('⚠️ Cookie failed, trying credentials...');
-            }
-        }
-
-        // Method 2: credentials (fallback)
-        if (!loggedIn) {
-            console.log('🔐 Logging into LinkedIn with credentials...');
-            await page.goto('https://www.linkedin.com/login', { waitUntil: 'load', timeout: 60000 });
-            await page.waitForTimeout(3000);
-            console.log('📝 Entering credentials...');
-            await page.fill('input#username', LINKEDIN_EMAIL);
-            await page.fill('input#password', LINKEDIN_PASSWORD);
-            await page.click('button[type="submit"]');
-            console.log('⏳ Waiting for login...');
-            await page.waitForURL('**/feed/**', { timeout: 60000 });
-            console.log('✅ Logged in via credentials!');
-        }
+        // Simple login with credentials (no cookies)
+        console.log('🔐 Logging into LinkedIn...');
+        await page.goto('https://www.linkedin.com/login', { waitUntil: 'load', timeout: 60000 });
+        await page.waitForTimeout(3000);
+        
+        // Fill credentials
+        console.log('📝 Entering credentials...');
+        await page.fill('input#username', LINKEDIN_EMAIL);
+        await page.fill('input#password', LINKEDIN_PASSWORD);
+        await page.click('button[type="submit"]');
+        
+        // Wait for navigation to feed
+        console.log('⏳ Waiting for login...');
+        await page.waitForURL('**/feed/**', { timeout: 60000 });
+        console.log('✅ Logged in!');
 
         // Go to messages with retry
         console.log('📬 Navigating to messages...');
