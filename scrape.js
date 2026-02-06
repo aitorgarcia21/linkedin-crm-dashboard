@@ -64,18 +64,42 @@ async function scrapeLinkedIn(forceFullScrape = false) {
     try {
         // === LOGIN: prefer li_at cookie, fallback to credentials ===
         if (LINKEDIN_LI_AT) {
-            console.log('🍪 Using li_at session cookie (no login needed)...');
-            await context.addCookies([{
-                name: 'li_at',
-                value: LINKEDIN_LI_AT,
-                domain: '.linkedin.com',
-                path: '/',
-                httpOnly: true,
-                secure: true,
-                sameSite: 'None'
-            }]);
-            console.log('✅ Session cookie set!');
-        } else {
+            console.log('🍪 Using li_at session cookie...');
+            await context.addCookies([
+                {
+                    name: 'li_at',
+                    value: LINKEDIN_LI_AT,
+                    domain: '.linkedin.com',
+                    path: '/',
+                    httpOnly: true,
+                    secure: true,
+                    sameSite: 'None'
+                },
+                {
+                    name: 'JSESSIONID',
+                    value: 'ajax:0000000000000000000',
+                    domain: '.linkedin.com',
+                    path: '/',
+                    httpOnly: false,
+                    secure: true,
+                    sameSite: 'None'
+                }
+            ]);
+            // Load linkedin.com first to establish session
+            console.log('🌐 Loading linkedin.com to establish session...');
+            await page.goto('https://www.linkedin.com/feed/', { waitUntil: 'domcontentloaded', timeout: 60000 });
+            await page.waitForTimeout(3000);
+            const currentUrl = page.url();
+            if (currentUrl.includes('login') || currentUrl.includes('checkpoint')) {
+                console.log('⚠️ li_at cookie expired or invalid, falling back to credentials...');
+                // Fall through to credential login below
+            } else {
+                console.log('✅ Session cookie login successful!');
+            }
+        }
+        
+        // Credential login if no cookie or cookie failed
+        if (!LINKEDIN_LI_AT || page.url().includes('login') || page.url().includes('checkpoint')) {
             console.log('🔐 Logging into LinkedIn with credentials...');
             await page.goto('https://www.linkedin.com/login', { waitUntil: 'load', timeout: 60000 });
             await page.waitForTimeout(3000);
